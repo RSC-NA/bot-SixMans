@@ -1,4 +1,4 @@
-# Configuration Instructions (Windows)
+# Developer Setup Instructions (Windows)
 
 This set of instructions informs developers how to configure their dev environment for Red in VS Code. This process will enable devs to run redbot instances from their shell and should resolve any redbot import references.
 
@@ -25,13 +25,13 @@ This set of instructions informs developers how to configure their dev environme
         - `.[dev]` or `.[style]` may be used
 
 
-1. Install Red in accordance with their [official documentation](https://docs.discord.red/en/stable/install_guides/windows.html#installing-red).
+1. Follow the "Installing Red" section Redbot's [official documentation](https://docs.discord.red/en/stable/install_guides/windows.html#installing-red).
 
 1. Enter Virtual Environment with:
 
      `$ & c:/Users/<path_to_project>/.venv/Scripts/Activate.ps1`
 1. Use the hotkey (`Ctrl+Shift+P`) and click "Python: Select Interpreter" 
-    - Select the virtual environment you just created: `('.venv': venv)`
+    - Select the virtual environment you just created: `('.venv': venv) ./.venv/Scripts.python.exe`
 
 # Debugging
 1. Open the debug window in VSC (`Ctrl+Shift+D`) and click the cog.
