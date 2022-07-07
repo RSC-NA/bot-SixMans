@@ -1,48 +1,99 @@
-# RSCBot
+# RSCBot: sixMans
 
-RSCBot is a collection of cogs written in Python that can be installed and used with the [Red Discord Bot](https://docs.discord.red/en/stable/index.html). These cogs are primarily written for use within [RSC (Rocket Soccar Confederation)](https://www.rocketsoccarconfederation.com/), a 3v3 Rocket League Amateur League that runs through [Discord](https://discord.gg/Q6RkvYm).
+The `sixMans` cog allows members of the guild to queue to play in a Team vs Team series. The cog enables you to set up one or more queues in a guild. When a queue pops, it creates a text channel
 
 ## Installation
 
-Follow the Red Discord Bot installation guide for [Windows](https://docs.discord.red/en/stable/install_windows.html) or [Linux/Mac](https://docs.discord.red/en/stable/install_linux_mac.html). You'll need to also [create a Discord bot account](https://discordpy.readthedocs.io/en/latest/discord.html) to get a token for use during the bot setup. After you have the bot setup, running, and invited to one of your Discord servers, you can begin installing and loading the cogs to the bot using the following commands in Discord (where `<p>` represents the prefix you selected your bot to use):
+The `sixMans` cog has no other cog dependancies.
 
 ```
-<p>load downloader
-<p>repo add RSCBot https://github.com/adammast/RSCBot [branch]
-<p>cog install RSCBot <cog_name>
-<p>load <cog_name>
+<p>cog install RSCBot sixMans
+<p>load sixMans
 ```
 
-Certain cogs depend on another cog being loaded first in order to work correctly. You can see a visualization of the cog dependencies [here](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing). Any cog that isn't shown in that chart is a stand-alone cog that can be loaded whenever and will work on its own.
+<br>
 
-## Usage
+# Setup
 
-Many of the RSC league specific cogs rely on roles being set up in the Discord server a certain way or data, such as team names and prefixes, to be added to the bot before they can be used. In this section I'll attempt to explain all the steps required in setting up the league specifics cogs correctly.
+### Add a New Queue
 
-#### Commands
+The `<p>addNewQueue` command can be used to add a new queue.
 
-For any command, you can see documentation explaining how to use the command with the format: `<p>help <command name>`
+```
+<p>addNewQueue "<Queue Name>" <points for playing> <points for winning> <channel(s)>
+```
 
-#### Franchises/Prefixes
+### Set Category
 
-As can be seen in the [cog dependencies doc](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing), the prefixManager cog should be the first cog loaded from the league specific cogs. For RSC, a prefix should be added for each franchise within the league. To add a prefix you first need to set up a franchise role with the following name format: [<franchise_name> (<GM_name>)](https://media.discordapp.net/attachments/679698891129880580/707975741505273938/Capture.PNG). After that the `<p>addPrefix` command can be used to add prefixes one at a time, or the `<p>addPrefixes` command can be used to add them in bulk. Alternatively, the command `<p>addFranchise` to complete all necessary steps for adding a single franchise simultaneously.
+The `<p>setCategory` can be used to set the category that contains the 6 mans text and voice channels.
 
-#### Tiers
+```
+<p>setCategory <cateory id>
+```
 
-Tiers are added through the teamManager cog using the `<p>addTier` command. The bot will accept any name for the tier. This will create a role for the tier, which along with the franchise roles, will be used to help determine what team a player is currently on. For each tier added, a corresponding free agent role will also be generated. For example, for a tier named `Premier` the role `Premier` and a free agent role named `PremierFA` will be generated.
+### Set Queue Timeout
 
-#### Teams
+The `<p>setQueueTimeout` can be used to declare how long in minutes a player may wait in a queue before being timed out (Default: 240). This value will apply to all queues set up in the guild.
 
-For RSC, each team will need to have a team name, a corresponding GM (General Manager), and a tier that the team plays in (which are generated from previous commands). Each tier should already be loaded into the bot according to the Tiers subsection above. Teams need to be added to the bot in order to use commands such as `<p>match`, `<p>roster`, or any of the transaction commands. Most of the commands involving teams are in the teamManager cog. To add a team to the bot the `<p>addTeam` command can be used to add them one at a time, or the `<p>addTeams` command can be used to add them in bulk. When a team is added to a franchise, the GM is given the tier role to reflect the addition of the team at that tier.
+```
+<p>setQueueTimeout <minutes>
+```
 
-#### Matches
+### Set Queue Sizes
 
-The match cog is used for easy propagation of match information within RSC. Both teams involved in the match need to be added to the bot according to the Teams subsection above. Matches need to be added and the match day set in order to use any of the faCheckIn cog commands. To add a match to the bot the `<p>addMatch` command can be used to add them one at a time, or the `<p>addMatches` command can be used to add them in bulk. You can use `<p>help addMatch` and `<p>help addMatches` in Discord to see documentation explaining how to use each command.
+The `<p>setQueueMaxSize` can be used to declare how many players must be in a queue for it to pop (Default: 6). This value will apply to all queues set up in the guild.
 
-#### Free Agent Role
+```
+<p>setQueueMaxSize <max_size>
+```
 
-Along with the tier specific free agent roles mentioned in the Tiers subsection above, you'll also want a general free agent role named `Free Agent`. This role is used in some of the transaction commands to determine if a player is a free agent or not.
+### Set Helper Role
 
-#### Draft Eligible Role
+Sets the role that will be assigned to individuals to resolve issues with 6 mans queues and games.
 
-For players who are eligible for the league's upcoming draft there should be a role named `Draft Eligible`. This role is used in some of the transaction commands and also used in the makeDE command from the bulkRoleManager cog.
+```
+<p>setHelperRole <role>
+```
+
+<br>
+
+# Regular Use
+
+#### Common Commands:
+
+#### `<p>q` - Queue for a 6 mans series
+
+#### `<p>dq` - De-Queue from a 6 mans series
+
+#### `<p>sr <winner>` - Report winner of a 6 mans series (Blue/Orange)
+
+#### `<p>cg` - Cancel Game
+
+#### Information:
+
+#### `<p>status` - Shows all players who are in the queue
+
+#### `<p>qi` - Shows all "Queue Info"
+
+#### `<p>qlb <timeframe> [queue_name]` - Gets a leaderboard for a timeframe ~~and queue if specified~~
+
+#### `<p>rank [timeframe]` - Enables a player to get a player card of their 6mans rating and overall win statistics
+
+<br>
+
+# Helper Commands
+
+#### `<p>enableQueues` - "Enable Queues" - Enables queueing for players (default)
+#### `<p>disableQueues` - "Disable Queues" - Disables queueing for players. This is particularly helpful for maintenance.
+
+#### `<p>cag` - "Check Active Games" - Lists all ongoing 6 mans series
+
+#### `<p>getQueueNames` - Lists names of available queues
+
+#### `<p>fts <team selection> [Queue ID]` - Force team selection for a popped queue game
+
+#### `<p>fr <winner>` - Forces result of 6 mans series (Blue/Orange)
+
+#### `<p>fcg` - Force cancel game
+
+#### `<p>kq <member>` - Kicks a member from a 6 mans queue
