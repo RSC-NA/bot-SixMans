@@ -891,7 +891,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @rank.command(aliases=["year", "yr"])
     async def yearly(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
-        """Yearly ranks. All games from the last 30 days will count"""
+        """Yearly ranks. All games from the last 365 days will count"""
         scores = await self._scores(ctx.guild)
 
         queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
