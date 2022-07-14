@@ -717,6 +717,7 @@ class SixMans(commands.Cog):
 
         sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
+		
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["daily"])
@@ -774,6 +775,25 @@ class SixMans(commands.Cog):
         queue_name = queue.name if queue else ctx.guild.name
         sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Monthly"))
+
+    @commands.guild_only()
+    @queueLeaderBoard.command(aliases=["yearly", "yr"])
+    async def month(self, ctx: Context, *, queue_name: str = None):
+        """Yearly leader board. All games from the last 365 days will count"""
+        scores = await self._scores(ctx.guild)
+
+        queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
+        queue_id = queue.id if queue else None
+        year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
+        players, games_played = self._filter_scores(ctx.guild, scores, year_ago, queue_id)
+
+        if not players:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        queue_name = queue.name if queue else ctx.guild.name
+        sorted_players = self._sort_player_dict(players)
+        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Yearly"))
 
     #endregion
 
