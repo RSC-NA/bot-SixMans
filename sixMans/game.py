@@ -585,7 +585,7 @@ class Game:
                 "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
                 "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
                 "cancel the game.".format(self.prefix), inline=False)
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
@@ -663,7 +663,7 @@ class Game:
             voted = "{} {}".format(self._get_pick_reaction(winning_vote), SELECTION_MODES[winning_vote])
             embed.add_field(name="Vote Complete!", value=voted, inline=False)
         
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if self.helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(self.helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
@@ -734,7 +734,7 @@ class Game:
         embed.add_field(name="Orange Team", value=orange_players, inline=False)
         embed.add_field(name="Unplaced Players", value=unplaced_players, inline=False)
 
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if self.helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(self.helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
