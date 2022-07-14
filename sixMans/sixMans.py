@@ -778,7 +778,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["yearly", "yr"])
-    async def month(self, ctx: Context, *, queue_name: str = None):
+    async def year(self, ctx: Context, *, queue_name: str = None):
         """Yearly leader board. All games from the last 365 days will count"""
         scores = await self._scores(ctx.guild)
 
@@ -887,6 +887,27 @@ class SixMans(commands.Cog):
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Monthly"))
+
+    @commands.guild_only()
+    @rank.command(aliases=["year", "yr"])
+    async def yearly(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
+        """Yearly ranks. All games from the last 30 days will count"""
+        scores = await self._scores(ctx.guild)
+
+        queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
+        queue_id = queue.id if queue else None
+        year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
+        players = self._filter_scores(ctx.guild, scores, year_ago, queue_id)[0]
+        queue_name = queue.name if queue else ctx.guild.name
+
+        if not players:
+            await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
+            return
+
+        queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
+        sorted_players = self._sort_player_dict(players)
+        player = player if player else ctx.author
+        await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Yearly"))
 
     #endregion
 
