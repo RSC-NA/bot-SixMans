@@ -539,11 +539,11 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
 
+        game.scoreReported = True
         msg = await ctx.send("{0} Please verify that the **{1}** team won the series. You have {2} seconds to verify"
             .format(opposing_captain.mention, winning_team, VERIFY_TIMEOUT))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
-        game.scoreReported = True
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
