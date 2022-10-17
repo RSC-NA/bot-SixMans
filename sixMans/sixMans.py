@@ -435,18 +435,8 @@ class SixMans(commands.Cog):
             return False
 
         game = self._get_game_by_text_channel(ctx.channel)
-        player = ctx.message.author
         if game:
-            if game.has_lobby_info():
-                await game.post_lobby_info()
-                await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT)
-            else:
-                await ctx.message.add_reaction(Strings.WHITE_X_REACT)
-                await ctx.send(f"{player.mention}, the game is not ready yet.")
-        else:
-            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
-            await ctx.send(f"{player.mention}, you must run this command from within your queue lobby channel.")
-            # TODO: determine a workaround from filtering through all active games
+            await game.post_lobby_info()
     
     @commands.guild_only()
     @commands.command(aliases=["q"])
@@ -645,7 +635,6 @@ class SixMans(commands.Cog):
         user = self.bot.get_user(payload.user_id)
         if not user:
             user = await self.bot.fetch_user(payload.user_id)
-
 
         await self.process_six_mans_reaction_add(message, channel, user, payload.emoji)
 

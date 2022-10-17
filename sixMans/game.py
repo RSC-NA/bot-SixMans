@@ -77,7 +77,7 @@ class Game:
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
         self.textChannel = await guild.create_text_channel(
-            "{} {} {} Mans".format(code, self.queue.name, self.queue.maxSize),
+            f"{code} {self.queue.name} {self.queue.maxSize} Mans",
             permissions_synced=True,
             category=category
         )
@@ -380,6 +380,11 @@ class Game:
             await self._notify(Strings.ONGOING_GS)
 
     async def _remove_stale_reactions(self, emoji_hex: int, member: discord.Member):
+        """
+        Removes stale reactions from the info message
+        This function removes any reactions from the member that are not the emoji_hex.
+        It utilizes an lock to prevent multiple instances of this function from running at the same time.
+        """
         if self.reaction_lock:
             return
 
@@ -397,49 +402,36 @@ class Game:
         if member not in self.players:
             asyncio.create_task(self.info_message.remove_reaction(emoji, member))
             return
-
         emoji_hex = self._hex_i_from_emoji(emoji)
-
         if emoji_hex not in SELECTION_MODES:
             return
-
         if added:
             await self._remove_stale_reactions(emoji_hex, member)
             self.player_votes[member] = emoji_hex
         elif self.player_votes[member] == emoji_hex:
             self.player_votes.pop(member)
-
         # ensure we still need to take action
         if self.reaction_lock or self.teamSelection.lower() != Strings.VOTE_TS.lower():
             return
-
         votes = { react_hex_i: 0 for react_hex_i in SELECTION_MODES }
-
         for vote in self.player_votes.values():
             votes[vote] += 1
-
         total_votes = 0
         runner_up = 0
-        running_vote = [None, 0]
-
+        winning_vote = [None, 0]
         for react_hex, num_votes in votes.items():
-            if num_votes > running_vote[1]:
-                runner_up = running_vote[1]
-                running_vote = [react_hex, num_votes]
-
-            elif num_votes > runner_up and num_votes <= running_vote[1]:
+            if num_votes > winning_vote[1]:
+                runner_up = winning_vote[1]
+                winning_vote = [react_hex, num_votes]
+            elif num_votes > runner_up and num_votes <= winning_vote[1]:
                 runner_up = num_votes
-
             total_votes += num_votes
-
         pending_votes = len(self.players) - total_votes
-
-
         # Vote Complete if...
-        if added and (pending_votes + runner_up) <= running_vote[1]:
+        if added and (pending_votes + runner_up) <= winning_vote[1]:
             # action and update first - help with race conditions
-            self.teamSelection = SELECTION_MODES[running_vote[0]]
-            embed = self._get_vote_embed(vote=votes, winning_vote=running_vote[0])
+            self.teamSelection = SELECTION_MODES[winning_vote[0]]
+            embed = self._get_vote_embed(vote=votes, winning_vote=winning_vote[0])
             await self.info_message.edit(embed=embed)
             await self.process_team_selection_method()
         else:
@@ -623,9 +615,11 @@ class Game:
         self.info_message = await self.textChannel.send(embed=embed)
 
     def has_lobby_info(self):
-        return self.roomName and self.roomPass and len(self.blue) > 0 and len(self.orange) > 0
+        return self.roomName and self.roomPass and len(self.blue) + len(self.orange) == self.queue.max_size
 
     async def post_lobby_info(self):
+        if not self.has_lobby_info():
+            return
         embed = discord.Embed(
             title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
             color=discord.Colour.green()
