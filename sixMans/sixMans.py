@@ -60,7 +60,7 @@ class SixMans(commands.Cog):
         asyncio.create_task(self._pre_load_data())
         self.timeout_tasks = {}
         self.observers = set()
-        
+
     def cog_unload(self):
         """Clean up when cog shuts down."""
         for player, tasks in self.timeout_tasks.items():
@@ -187,7 +187,7 @@ class SixMans(commands.Cog):
         self.player_timeout_time[ctx.guild] = seconds
         s_if_plural = "" if minutes == 1 else "s"
         await ctx.send(":white_check_mark: Players in Six Mans Queues will now be timed out after **{} minute{}**.".format(minutes, s_if_plural))
-        
+
     @commands.guild_only()
     @commands.command(aliases=['getQTO', 'gqto', 'qto'])
     async def getQueueTimeout(self, ctx: Context):
@@ -196,7 +196,7 @@ class SixMans(commands.Cog):
         minutes = seconds//60
         s_if_plural = "" if minutes == 1 else "s"
         await ctx.send("Players in Six Mans Queues are timed out after **{} minute{}**.".format(minutes, s_if_plural))
-    
+
     @commands.guild_only()
     @commands.command(aliases=['setQueueSize', 'setQMaxSize', 'setQMS', 'sqms'])
     @checks.admin_or_permissions()
@@ -213,7 +213,7 @@ class SixMans(commands.Cog):
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await self._save_queue_max_size(ctx.guild, max_size)
         await ctx.send("Done")
-    
+
     @commands.guild_only()
     @commands.command(aliases=['getQMaxSize', 'getQMS', 'gqms', 'qms'])
     @checks.admin_or_permissions()
@@ -249,7 +249,7 @@ class SixMans(commands.Cog):
             await self._pop_queue(ctx, six_mans_queue)
 
     @commands.guild_only()
-    @commands.command(aliases=["kq"])
+    @commands.command(aliases=["kq", "fdq"])
     async def kickQueue(self, ctx: Context, player: discord.Member):
         """Remove someone else from the queue"""
         if not await self.has_perms(ctx.author):
@@ -272,7 +272,7 @@ class SixMans(commands.Cog):
         self.queues_enabled[ctx.guild] = True
 
         await ctx.send("Queueing has been enabled.")
-    
+
     @commands.guild_only()
     @commands.command(aliases=["stopQueue", "sq"])
     async def disableQueues(self, ctx: Context):
@@ -435,14 +435,8 @@ class SixMans(commands.Cog):
             return False
 
         game = self._get_game_by_text_channel(ctx.channel)
-        player = ctx.message.author
         if game:
             await game.post_lobby_info()
-            await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT)
-        else:
-            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
-            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
-            # TODO: determine a workaround from filtering through all active games
     
     @commands.guild_only()
     @commands.command(aliases=["q"])
@@ -629,7 +623,7 @@ class SixMans(commands.Cog):
         channel = reaction.message.channel
         if type(channel) == discord.DMChannel:
             return
-        await self.process_six_mans_reaction_add(reaction.message, channel, user, reaction.emoji) 
+        await self.process_six_mans_reaction_add(reaction.message, channel, user, reaction.emoji)
 
     @commands.Cog.listener("on_raw_reaction_add")
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -641,8 +635,7 @@ class SixMans(commands.Cog):
         user = self.bot.get_user(payload.user_id)
         if not user:
             user = await self.bot.fetch_user(payload.user_id)
-        
-        
+
         await self.process_six_mans_reaction_add(message, channel, user, payload.emoji)
 
     @commands.Cog.listener("on_reaction_remove")
@@ -678,13 +671,13 @@ class SixMans(commands.Cog):
                 break
         if queue.channels:
             return
-        
+
         clone = await channel.clone()
         helper_role = await self._helper_role(channel.guild)
         helper_ping = " {}".format(helper_role.mention) if helper_role else ""
         await clone.send(":grey_exclamation:{0} This channel has been created because the last textChannel for the **{1}** queue has been deleted.".format(helper_ping, queue.name))
         queue.channels.append(clone)
-        await self._save_queues(channel.guild, self.queues[ctx.guild])
+        await self._save_queues(channel.guild, self.queues[channel.guild])
 
     #endregion
 
@@ -717,7 +710,7 @@ class SixMans(commands.Cog):
 
         sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
-		
+
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["daily"])
@@ -1328,13 +1321,13 @@ class SixMans(commands.Cog):
         game = await self._create_game(ctx.guild, six_mans_queue, prefix=ctx.prefix)
         if game is None:
             return False
-        
+
         #Remove players from any other queue they were in
         for player in game.players:
             for queue in self.queues[ctx.guild]:
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
-        
+
         # Notify all players that queue has popped
         # await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
 
@@ -1420,7 +1413,7 @@ class SixMans(commands.Cog):
         # Note: This may be called TWICE both by on_reaction and/or on_raw_reaction
         if user.bot:
             return
-        
+
         # on_raw_reaction_add
         if type(emoji) == discord.partial_emoji.PartialEmoji:
             emoji = emoji.name
@@ -1440,7 +1433,7 @@ class SixMans(commands.Cog):
 
         elif team_selection_mode == Strings.CAPTAINS_TS.lower():
             await game.process_captains_pick(emoji, user)
-        
+
         elif team_selection_mode == Strings.SELF_PICKING_TS.lower():
             await game.process_self_picking_teams(emoji, user, True)
 
@@ -1468,19 +1461,19 @@ class SixMans(commands.Cog):
         # Note: This may be called TWICE both by on_reaction and/or on_raw_reaction
         if user.bot:
             return
-        
+
         # on_raw_reaction_add
         if type(emoji) == discord.partial_emoji.PartialEmoji:
             emoji = emoji.name
         try:
             game = self._get_game_by_text_channel(channel)
-            game: Game 
+            game: Game
             if not game:
                 return False
 
             if game.teamSelection.lower() == Strings.VOTE_TS.lower():
                 await game.process_team_select_vote(emoji, user, added=False)
-            
+
             elif game.teamSelection.lower() == Strings.SELF_PICKING_TS.lower():
                 await game.process_self_picking_teams(emoji, user, False)
         except:
