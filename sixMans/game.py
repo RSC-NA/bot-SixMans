@@ -615,7 +615,7 @@ class Game:
         self.info_message = await self.textChannel.send(embed=embed)
 
     def has_lobby_info(self):
-        return self.roomName and self.roomPass and len(self.blue) + len(self.orange) == self.queue.max_size
+        return self.roomName and self.roomPass and len(self.blue) + len(self.orange) == self.queue.maxSize
 
     async def post_lobby_info(self):
         if not self.has_lobby_info():
