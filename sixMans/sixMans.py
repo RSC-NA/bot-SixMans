@@ -1257,11 +1257,14 @@ class SixMans(commands.Cog):
                 pass
 
     def _get_opposing_captain(self, player: discord.Member, game: Game):
-        opposing_captain = None
         if game.state == Strings.TEAM_SELECTION_GS:
             players = list(game.players)
+            if player not in players:
+                return None
             players.remove(player)
             return random.choice(players)
+
+        opposing_captain = None
 
         if player in game.blue:
             opposing_captain = game.captains[1] #Orange team captain
