@@ -263,7 +263,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["cq"])
-    async def clearQueue(self, ctx: Context, player: discord.Member):
+    async def clearQueue(self, ctx: Context):
         """Clear the queue"""
         if not await self.has_perms(ctx.author):
             return
