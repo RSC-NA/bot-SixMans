@@ -262,9 +262,23 @@ class SixMans(commands.Cog):
             await ctx.send("{} is not in queue.".format(player.display_name))
 
     @commands.guild_only()
+    @commands.command(aliases=["cq"])
+    async def clearQueue(self, ctx: Context):
+        """Clear the queue"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
+        try:
+            await asyncio.gather(*[self._remove_from_queue(player, six_mans_queue) for player in six_mans_queue.queue])
+            await ctx.send("Queue cleared.")
+        except:
+            await ctx.send("Error clearing queue.")
+
+    @commands.guild_only()
     @commands.command(aliases=["eq"])
     async def enableQueues(self, ctx: Context):
-        """Remove someone else from the queue"""
+        """Enable queueing for the guild."""
         if not await self.has_perms(ctx.author):
             return
 
@@ -276,10 +290,10 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["stopQueue", "sq"])
     async def disableQueues(self, ctx: Context):
-        """Remove someone else from the queue"""
+        """Disable queueing for the guild."""
         if not await self.has_perms(ctx.author):
             return
-        
+
         await self._save_queues_enabled(ctx.guild, False)
         self.queues_enabled[ctx.guild] = False
 
