@@ -2,3 +2,6 @@
 .venv/
 .vscode/
 __pycache__/
+pyvenv.cfg
+Tracker*.json
+*.swp

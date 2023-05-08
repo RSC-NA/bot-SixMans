@@ -1,4 +1,6 @@
 from .sixMans import SixMans
 
-def setup(bot):
-    bot.add_cog(SixMans(bot))
+
+async def setup(bot):
+    await bot.add_cog(SixMans(bot))
+

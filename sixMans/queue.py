@@ -1,24 +1,39 @@
 import collections
 import datetime
+import logging
 import uuid
 import struct
 from queue import Queue
 from typing import List
 from .strings import Strings
 
+log = logging.getLogger("red.RSC6Mans.sixMans.queue")
+
 import discord
 
 SELECTION_MODES = {
-    0x1F3B2: Strings.RANDOM_TS,         # game_die
-    0x1F1E8: Strings.CAPTAINS_TS,       # C
-    0x0262F: Strings.BALANCED_TS,       # yin_yang
-    0x1F530: Strings.SELF_PICKING_TS,   # beginner
-    0x1F5F3: Strings.VOTE_TS            # ballot_box
+    0x1F3B2: Strings.RANDOM_TS,  # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,  # C
+    0x0262F: Strings.BALANCED_TS,  # yin_yang
+    0x1F530: Strings.SELF_PICKING_TS,  # beginner
+    0x1F5F3: Strings.VOTE_TS,  # ballot_box
 }
 
+
 class SixMansQueue:
-    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
-        points, players, gamesPlayed, maxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None, lobby_vc: discord.VoiceChannel=None):
+    def __init__(
+        self,
+        name,
+        guild: discord.Guild,
+        channels: List[discord.TextChannel],
+        points,
+        players,
+        gamesPlayed,
+        maxSize,
+        teamSelection=Strings.RANDOM_TS,
+        category: discord.CategoryChannel = None,
+        lobby_vc: discord.VoiceChannel = None,
+    ):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -62,7 +77,7 @@ class SixMansQueue:
     def _queue_full(self):
         return self.queue.qsize() >= self.maxSize
 
-    async def send_message(self, message='', embed=None):
+    async def send_message(self, message="", embed=None):
         messages = []
         for channel in self.channels:
             messages.append(await channel.send(message, embed=embed))
@@ -72,21 +87,29 @@ class SixMansQueue:
         self.teamSelection = team_selection
         emoji = self.get_ts_emoji()
         if emoji:
-            await self.send_message("Queue Team Selection has been set to {} **{}**.".format(emoji, team_selection))
+            await self.send_message(
+                "Queue Team Selection has been set to {} **{}**.".format(
+                    emoji, team_selection
+                )
+            )
         else:
-            await self.send_message("Queue Team Selection has been set to **{}**.".format(team_selection))
+            await self.send_message(
+                "Queue Team Selection has been set to **{}**.".format(team_selection)
+            )
 
     def get_ts_emoji(self):
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
-    
+
     def _get_pick_reaction(self, int_or_hex):
         try:
             if type(int_or_hex) == int:
-                return struct.pack('<I', int_or_hex).decode('utf-32le')
+                return struct.pack("<I", int_or_hex).decode("utf-32le")
             if type(int_or_hex) == str:
-                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
+                return struct.pack("<I", int(int_or_hex, base=16)).decode(
+                    "utf-32le"
+                )  # i == react_hex
         except:
             return None
 
@@ -98,14 +121,15 @@ class SixMansQueue:
             "Players": self.players,
             "GamesPlayed": self.gamesPlayed,
             "TeamSelection": self.teamSelection,
-            "MaxSize": self.maxSize
+            "MaxSize": self.maxSize,
         }
         if self.category:
-            q_data['Category'] = self.category.id
+            q_data["Category"] = self.category.id
         if self.lobby_vc:
-            q_data['LobbyVC'] = self.lobby_vc.id
-        
+            q_data["LobbyVC"] = self.lobby_vc.id
+
         return q_data
+
 
 class PlayerQueue(Queue):
     def _init(self, maxsize):
@@ -167,8 +191,8 @@ class OrderedSet(collections.abc.MutableSet):
 
     def __repr__(self):
         if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
+            return "%s()" % (self.__class__.__name__,)
+        return "%s(%r)" % (self.__class__.__name__, list(self))
 
     def __eq__(self, other):
         if isinstance(other, OrderedSet):
