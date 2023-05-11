@@ -86,7 +86,6 @@ class Game:
         code = str(self.id)[-3:]
         self.textChannel = await guild.create_text_channel(
             f"{code} {self.queue.name} {self.queue.maxSize} Mans",
-            permissions_synced=True,
             category=category,
         )
         await self.textChannel.set_permissions(
@@ -98,20 +97,17 @@ class Game:
         # create a general VC lobby for all players in a session
         general_vc = await guild.create_voice_channel(
             "{} | {} General VC".format(code, self.queue.name),
-            permissions_synced=True,
             category=category,
         )
         await general_vc.set_permissions(guild.default_role, connect=False)
 
         blue_vc = await guild.create_voice_channel(
             "{} | {} Blue Team".format(code, self.queue.name),
-            permissions_synced=True,
             category=category,
         )
         await blue_vc.set_permissions(guild.default_role, connect=False)
         oran_vc = await guild.create_voice_channel(
             "{} | {} Orange Team".format(code, self.queue.name),
-            permissions_synced=True,
             category=category,
         )
         await oran_vc.set_permissions(guild.default_role, connect=False)
@@ -215,7 +211,7 @@ class Game:
     async def pick_random_teams(self):
         self.blue = set()
         self.orange = set()
-        for player in random.sample(self.players, int(len(self.players) // 2)):
+        for player in random.sample(tuple(self.players), int(len(self.players) // 2)):
             self.add_to_orange(player)
         blue = [player for player in self.players]
         for player in blue:
@@ -601,7 +597,7 @@ class Game:
             inline=False,
         )
 
-        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.set_thumbnail(url=self.queue.guild.icon.url)
         embed.add_field(
             name="Blue",
             value="{}\n".format("\n".join([player.mention for player in self.blue])),
@@ -645,7 +641,7 @@ class Game:
             sm_title += " :x: [Teams Changed]"
             embed_color = discord.Colour.red()
         embed = discord.Embed(title=sm_title, color=embed_color)
-        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.set_thumbnail(url=self.queue.guild.icon.url)
 
         if self.queue.teamSelection == Strings.VOTE_TS:
             ts_emoji = self._get_ts_emoji()
@@ -741,7 +737,7 @@ class Game:
             title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
             color=discord.Colour.green(),
         )
-        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.set_thumbnail(url=self.queue.guild.icon.url)
         embed.add_field(
             name="Blue",
             value="{}\n".format("\n".join([player.mention for player in self.blue])),
@@ -801,7 +797,7 @@ class Game:
             color=self._get_completion_color(total_votes, pending),
             description=description,
         )
-        # embed.set_thumbnail(url=self.queue.guild.icon_url)
+        # embed.set_thumbnail(url=self.queue.guild.icon.url)
 
         embed.add_field(name="Options", value="\n".join(vote_options), inline=True)
         embed.add_field(name="Votes", value="\n".join(votes_casted), inline=True)
@@ -857,11 +853,11 @@ class Game:
         )
 
         if pick:
-            embed.set_thumbnail(url=player.avatar_url)
+            embed.set_thumbnail(url=player.avatar.url)
         elif guild:
-            embed.set_thumbnail(url=guild.icon_url)
+            embed.set_thumbnail(url=guild.icon.url)
         else:
-            embed.set_thumbnail(url=self.queue.guild.icon_url)
+            embed.set_thumbnail(url=self.queue.guild.icon.url)
 
         # List teams as they stand
         embed.add_field(
@@ -903,7 +899,7 @@ class Game:
             color=self._get_completion_color(placed, self.queue.maxSize - placed),
             description="React :orange_circle: with or :blue_circle: to pick your team!",
         )
-        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.set_thumbnail(url=self.queue.guild.icon.url)
 
         # List teams as they stand
         no_players_str = "[No Players]"

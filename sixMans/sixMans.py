@@ -775,8 +775,7 @@ class SixMans(commands.Cog):
                 )
             )
             return
-
-        await game.post_more_lobby_info(prefix=ctx.prefix)
+        await game.post_more_lobby_info()
 
     # team selection
     @commands.guild_only()
@@ -837,12 +836,12 @@ class SixMans(commands.Cog):
     @commands.Cog.listener("on_reaction_add")
     async def on_reaction_add(self, reaction, user):
         return
-        channel = reaction.message.channel
-        if type(channel) == discord.DMChannel:
-            return
-        await self.process_six_mans_reaction_add(
-            reaction.message, channel, user, reaction.emoji
-        )
+        #channel = reaction.message.channel
+        #if type(channel) == discord.DMChannel:
+        #    return
+        #await self.process_six_mans_reaction_add(
+        #    reaction.message, channel, user, reaction.emoji
+        #)
 
     @commands.Cog.listener("on_raw_reaction_add")
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -860,12 +859,12 @@ class SixMans(commands.Cog):
     @commands.Cog.listener("on_reaction_remove")
     async def on_reaction_remove(self, reaction, user):
         return
-        if type(reaction.message.channel) == discord.DMChannel:
-            return
+        #if type(reaction.message.channel) == discord.DMChannel:
+        #    return
 
-        await self.process_six_mans_reaction_removed(
-            reaction.message.channel, user, reaction.emoji
-        )
+        #await self.process_six_mans_reaction_removed(
+        #    reaction.message.channel, user, reaction.emoji
+        #)
 
     @commands.Cog.listener("on_raw_reaction_remove")
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
@@ -1462,7 +1461,12 @@ class SixMans(commands.Cog):
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._put(player)
         embed = self.embed_player_added(player, six_mans_queue)
-        await six_mans_queue.send_message(embed=embed)
+        try:
+            await six_mans_queue.send_message(embed=embed)
+        except Exception as exc:
+            log.debug(f"Exception adding {player.name} to queue: {exc}")
+            raise exc
+
         await self.create_timeout_task(
             player, six_mans_queue, self.player_timeout_time[six_mans_queue.guild]
         )
@@ -1510,7 +1514,7 @@ class SixMans(commands.Cog):
                 description=auto_remove_msg + invite_msg,
                 color=discord.Color.red(),
             )
-            embed.set_thumbnail(url=six_mans_queue.guild.icon_url)
+            embed.set_thumbnail(url=six_mans_queue.guild.icon.url)
             await player.send(embed=embed)
         except:
             try:
@@ -1925,6 +1929,7 @@ class SixMans(commands.Cog):
     def embed_player_added(self, player: discord.Member, six_mans_queue: SixMansQueue):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.green())
+        player_icon = player.avatar.url if player.avatar else None
         embed.set_author(
             name="{0} added to the {1} queue. ({2}/{3})".format(
                 player.display_name,
@@ -1932,8 +1937,8 @@ class SixMans(commands.Cog):
                 six_mans_queue.queue.qsize(),
                 six_mans_queue.maxSize,
             ),
-            icon_url="{}".format(player.avatar),
-        )
+            icon_url=player_icon,
+         )
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
