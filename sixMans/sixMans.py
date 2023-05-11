@@ -1983,10 +1983,11 @@ class SixMans(commands.Cog):
             ),
             inline=False,
         )
+
         if queue.lobby_vc:
-            embed.add_field(name="Lobby VC", value=default_lobby_vc.name, inline=False)
+            embed.add_field(name="Lobby VC", value=queue.lobby_vc, inline=False)
         elif default_lobby_vc:
-            embed.add_field(name="Lobby VC", value=default_lobby_vc.name, inline=False)
+            embed.add_field(name="Lobby VC", value=default_lobby_vc, inline=False)
 
         embed.add_field(
             name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False
@@ -2293,6 +2294,7 @@ class SixMans(commands.Cog):
             # Pre-load Games
             games = await self._games(guild)
             game_list = []
+            log.debug(f"Preloaded Games Length: {len(games)}")
             for key, value in games.items():
                 players = [guild.get_member(x) for x in value["Players"]]
                 text_channel = guild.get_channel(value["TextChannel"])
@@ -2320,6 +2322,7 @@ class SixMans(commands.Cog):
                 game.use_reactions = value["UseReactions"]
                 game.prefix = value["Prefix"]
 
+                log.debug(f"ID: {game.id} game.textChannel: {game.textChannel}")
                 try:
                     game.info_message = await game.textChannel.fetch_message(
                         value["InfoMessage"]
