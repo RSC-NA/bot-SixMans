@@ -186,7 +186,8 @@ class Game:
             helper_role = self.helper_role
 
         # Pick captains
-        self.captains = random.sample(self.players, 2)
+        log.debug(f"Picking captains from: {self.players}")
+        self.captains = random.sample(list(self.players), 2)
         self.blue.add(self.captains[0])
         self.orange.add(self.captains[1])
         self.helper_role = helper_role
@@ -293,7 +294,8 @@ class Game:
             )
             for this_react in self.info_message.reactions:
                 this_react: discord.Reaction
-                reacted_members = await this_react.users().flatten()
+                #reacted_members = await this_react.users().flatten()
+                reacted_members = [user async for users in this_react.users()]
                 if user in reacted_members:
                     try:
                         await this_react.remove(user)
