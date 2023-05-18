@@ -294,7 +294,6 @@ class Game:
             )
             for this_react in self.info_message.reactions:
                 this_react: discord.Reaction
-                #reacted_members = await this_react.users().flatten()
                 reacted_members = [user async for users in this_react.users()]
                 if user in reacted_members:
                     try:
