@@ -854,7 +854,7 @@ class Game:
         )
 
         if pick:
-            embed.set_thumbnail(url=player.avatar.url)
+            embed.set_thumbnail(url=player.display_avatar.url)
         elif guild:
             embed.set_thumbnail(url=guild.icon.url)
         else:
