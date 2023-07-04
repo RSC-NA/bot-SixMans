@@ -1929,7 +1929,7 @@ class SixMans(commands.Cog):
     def embed_player_added(self, player: discord.Member, six_mans_queue: SixMansQueue):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.green())
-        player_icon = player.avatar.url if player.avatar else None
+        player_icon = player.display_avatar.url
         embed.set_author(
             name="{0} added to the {1} queue. ({2}/{3})".format(
                 player.display_name,
@@ -1954,7 +1954,7 @@ class SixMans(commands.Cog):
                 six_mans_queue.queue.qsize(),
                 six_mans_queue.maxSize,
             ),
-            icon_url="{}".format(player.avatar),
+            icon_url=player.display_avatar.url,
         )
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
@@ -2173,7 +2173,7 @@ class SixMans(commands.Cog):
                 ),
                 color=discord.Colour.blue(),
             )
-            embed.set_thumbnail(url=player.avatar)
+            embed.set_thumbnail(url=player.display_avatar.url)
             embed.add_field(
                 name="Points:",
                 value="**Value:** {2} | **Rank:** {0}/{1}".format(
@@ -2203,7 +2203,7 @@ class SixMans(commands.Cog):
                 color=discord.Colour.red(),
                 description="No stats yet to rank {}".format(player.mention),
             )
-            embed.set_thumbnail(url=player.avatar)
+            embed.set_thumbnail(url=player.display_avatar.url)
         return embed
 
     def format_player_list(self, queue: SixMansQueue):
