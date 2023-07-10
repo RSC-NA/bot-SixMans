@@ -269,9 +269,9 @@ class SixMans(commands.Cog):
         )
 
     @commands.guild_only()
-    @commands.command(aliases=["setQueueSize", "setQMaxSize", "setQMS", "sqms"])
+    @commands.command(aliases=["setDefaultQueueSize", "setDefaultQMaxSize", "setDefaultQMS", "setDQMS", "sdqms"])
     @checks.admin_or_permissions()
-    async def setQueueMaxSize(self, ctx: Context, max_size: int):
+    async def setDefaultQueueMaxSize(self, ctx: Context, max_size: int):
         """Sets the max size for all queues in the guild. (Default: 6)"""
         if max_size <= 2:
             return await ctx.send(":x: Queues sizes must be 4+.")
@@ -285,6 +285,33 @@ class SixMans(commands.Cog):
 
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await self._save_queue_max_size(ctx.guild, max_size)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["setQueueSize", "setQMaxSize", "setQMS", "sqms"])
+    @checks.admin_or_permissions()
+    async def setQueueMaxSize(self, ctx: Context, queue_name, *, max_size: int):
+        """Sets the max size for a queue (Default: 6)"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        six_mans_queue = None
+        for queue in self.queues[ctx.guild]:
+            if queue.name == queue_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            return await ctx.send(":x: No queue found with name: {0}".format(queue_name))
+            
+        if max_size % 2 == 1:
+            return await ctx.send(
+                ":x: Queues sizes must be configured for an even number of players."
+            )
+
+        six_mans_queue.maxSize = max_size
+
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
 
     @commands.guild_only()
