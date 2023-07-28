@@ -416,8 +416,6 @@ class SixMans(commands.Cog):
             await ctx.send("Queue cleared.")
         except Exception as exc:
             log.debug(f"Error clearing queue: {exc}")
-            import traceback as tb
-            log.debug(f"{tb.format_exc()}")
             await ctx.send("Error clearing queue.")
 
     @commands.guild_only()
