@@ -228,6 +228,10 @@ class SixMans(commands.Cog):
             await ctx.send(":x: No queue found with name: {0}".format(queue_name))
             return
 
+        if six_mans_queue.maxSize == 2:
+            await ctx.send(":x: Queue with max size of 2 cannot change team selection method.")
+            return
+        
         valid_ts = self.is_valid_ts(team_selection)
         if valid_ts:
             await six_mans_queue.set_team_selection(valid_ts)
@@ -239,6 +243,28 @@ class SixMans(commands.Cog):
                     team_selection
                 )
             )
+
+    @commands.guild_only()
+    @commands.command(aliases=["getQTS", "getQueueTeamSelection", "gqts"])
+    @checks.admin_or_permissions()
+    async def getQueueTS(self, ctx: Context, queue_name):
+        """Sets the team selection mode for a specific queue"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        six_mans_queue = None
+        for queue in self.queues[ctx.guild]:
+            if queue.name == queue_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            await ctx.send(":x: No queue found with name: {0}".format(queue_name))
+            return
+        
+        await ctx.send(
+            f"{six_mans_queue.name} team selection is currently set to **{six_mans_queue.teamSelection}**."
+        )
 
     @commands.guild_only()
     @commands.command(aliases=["setQTimeout", "setQTO", "sqto"])
@@ -269,31 +295,72 @@ class SixMans(commands.Cog):
         )
 
     @commands.guild_only()
-    @commands.command(aliases=["setQueueSize", "setQMaxSize", "setQMS", "sqms"])
+    @commands.command(aliases=["setDefaultQueueSize", "setDefaultQMaxSize", "setDefaultQMS", "setDQMS", "sdqms"])
     @checks.admin_or_permissions()
-    async def setQueueMaxSize(self, ctx: Context, max_size: int):
-        """Sets the max size for all queues in the guild. (Default: 6)"""
-        if max_size <= 2:
-            return await ctx.send(":x: Queues sizes must be 4+.")
+    async def setDefaultQueueMaxSize(self, ctx: Context, max_size: int):
+        """Sets the default queue max size for the guild. This will not change the queue max size for any queues. (Default: 6)"""
         if max_size % 2 == 1:
             return await ctx.send(
                 ":x: Queues sizes must be configured for an even number of players."
             )
 
+        await self._save_queue_max_size(ctx.guild, max_size)
+
+        if max_size == 2:
+            await self._save_team_selection(ctx.guild, Strings.RANDOM_TS)
+
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["setQueueSize", "setQMaxSize", "setQMS", "sqms"])
+    @checks.admin_or_permissions()
+    async def setQueueMaxSize(self, ctx: Context, queue_name, *, max_size: int):
+        """Sets the max size for a queue (Default: 6)"""
+        six_mans_queue = None
         for queue in self.queues[ctx.guild]:
-            queue.maxSize = max_size
+            if queue.name == queue_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            return await ctx.send(":x: No queue found with name: {0}".format(queue_name))
+            
+        if max_size % 2 == 1:
+            return await ctx.send(
+                ":x: Queues sizes must be configured for an even number of players."
+            )
+
+        six_mans_queue.maxSize = max_size
+
+        if max_size == 2:
+            six_mans_queue.set_team_selection(Strings.RANDOM_TS)
 
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
-        await self._save_queue_max_size(ctx.guild, max_size)
         await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["getDQMaxSize", "getDQMS", "gdqms", "dqms"])
+    @checks.admin_or_permissions()
+    async def getDefaultQueueMaxSize(self, ctx: Context):
+        """Gets the max size for all queues in the guild. (Default: 6)"""
+        guild_queue_size = await self._get_queue_max_size(ctx.guild)
+        await ctx.send("Default Queue Size: {}".format(guild_queue_size))
 
     @commands.guild_only()
     @commands.command(aliases=["getQMaxSize", "getQMS", "gqms", "qms"])
     @checks.admin_or_permissions()
-    async def getQueueMaxSize(self, ctx: Context):
-        """Gets the max size for all queues in the guild. (Default: 6)"""
-        guild_queue_size = await self._get_queue_max_size(ctx.guild)
-        await ctx.send("Default Queue Size: {}".format(guild_queue_size))
+    async def getQueueMaxSize(self, ctx: Context, queue_name):
+        """Gets the max size for a specific queue"""
+        six_mans_queue = None
+        for queue in self.queues[ctx.guild]:
+            if queue.name == queue_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            return await ctx.send(":x: No queue found with name: {0}".format(queue_name))
+
+        await ctx.send(f'{six_mans_queue.name} Queue Size: {six_mans_queue.maxSize}')
 
     @commands.guild_only()
     @commands.command()
@@ -1319,6 +1386,11 @@ class SixMans(commands.Cog):
         - ~~**shuffle**: selects random teams, but allows re-shuffling teams after they have been set~~
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
+        if await self._get_queue_max_size(ctx.guild) == 2:
+            return await ctx.send(
+                ":x: You may not change team selection method when default queue max size is 2."
+            )
+
         team_selection_method = team_selection_method.title()
         if team_selection_method not in QTS_METHODS:
             return await ctx.send(
