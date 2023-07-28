@@ -983,11 +983,9 @@ class SixMans(commands.Cog):
     async def overall(self, ctx: Context, *, queue_name: str = None):
         """All-time leader board"""
         players = None
-        log.debug(f"queue_name: {queue_name}")
         queue = (
             await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         )
-        log.debug(f"queue: {queue}")
         queue_name = queue.name if queue else ctx.guild.name
 
         if queue:
