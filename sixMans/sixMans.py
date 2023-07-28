@@ -983,9 +983,11 @@ class SixMans(commands.Cog):
     async def overall(self, ctx: Context, *, queue_name: str = None):
         """All-time leader board"""
         players = None
+        log.debug(f"queue_name: {queue_name}")
         queue = (
             await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         )
+        log.debug(f"queue: {queue}")
         queue_name = queue.name if queue else ctx.guild.name
 
         if queue:
@@ -994,6 +996,10 @@ class SixMans(commands.Cog):
         else:
             players = await self._players(ctx.guild)
             games_played = await self._games_played(ctx.guild)
+
+        if games_played == 0:
+            await ctx.send(f":x: No games have been played in {queue_name}")
+            return
 
         if not players:
             await ctx.send(
@@ -1024,6 +1030,10 @@ class SixMans(commands.Cog):
             ctx.guild, scores, day_ago, queue_id
         )
 
+        if games_played == 0:
+            await ctx.send(f":x: No games have been played in {queue_name}")
+            return
+
         if not players:
             await ctx.send(
                 ":x: Queue leaderboard not available for {0}".format(queue_name)
@@ -1051,6 +1061,10 @@ class SixMans(commands.Cog):
         players, games_played = self._filter_scores(
             ctx.guild, scores, week_ago, queue_id
         )
+
+        if games_played == 0:
+            await ctx.send(f":x: No games have been played in {queue_name}")
+            return
 
         if not players:
             await ctx.send(
@@ -1081,6 +1095,10 @@ class SixMans(commands.Cog):
             ctx.guild, scores, month_ago, queue_id
         )
 
+        if games_played == 0:
+            await ctx.send(f":x: No games have been played in {queue_name}")
+            return
+
         if not players:
             await ctx.send(
                 ":x: Queue leaderboard not available for {0}".format(queue_name)
@@ -1110,11 +1128,17 @@ class SixMans(commands.Cog):
             ctx.guild, scores, year_ago, queue_id
         )
 
+        if games_played == 0:
+            await ctx.send(f":x: No games have been played in {queue_name}")
+            return
+
         if not players:
             await ctx.send(
                 ":x: Queue leaderboard not available for {0}".format(queue_name)
             )
             return
+
+
 
         queue_name = queue.name if queue else ctx.guild.name
         sorted_players = self._sort_player_dict(players)
@@ -1900,7 +1924,7 @@ class SixMans(commands.Cog):
                     return six_mans_queue
         return None
 
-    def _get_queue_by_name(self, guild: discord.Guild, queue_name):
+    async def _get_queue_by_name(self, guild: discord.Guild, queue_name: str):
         for queue in self.queues[guild]:
             if queue.name == queue_name:
                 return queue
