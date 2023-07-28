@@ -410,14 +410,14 @@ class SixMans(commands.Cog):
 
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         try:
-            await asyncio.gather(
-                *[
-                    self._remove_from_queue(player, six_mans_queue)
-                    for player in six_mans_queue.queue
-                ]
-            )
+            for player in six_mans_queue.queue.queue:
+                log.debug(f"Removing player: {player}")
+                await self._remove_from_queue(player, six_mans_queue)
             await ctx.send("Queue cleared.")
-        except:
+        except Exception as exc:
+            log.debug(f"Error clearing queue: {exc}")
+            import traceback as tb
+            log.debug(f"{tb.format_exc()}")
             await ctx.send("Error clearing queue.")
 
     @commands.guild_only()
@@ -2053,6 +2053,11 @@ class SixMans(commands.Cog):
             value="{}\n".format(
                 ", ".join([channel.mention for channel in queue.channels])
             ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Queue Size",
+            value=queue.maxSize,
             inline=False,
         )
 
