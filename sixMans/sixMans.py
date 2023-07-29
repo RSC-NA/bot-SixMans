@@ -333,7 +333,7 @@ class SixMans(commands.Cog):
         six_mans_queue.maxSize = max_size
 
         if max_size == 2:
-            six_mans_queue.set_team_selection(Strings.RANDOM_TS)
+            await six_mans_queue.set_team_selection(Strings.RANDOM_TS)
 
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
