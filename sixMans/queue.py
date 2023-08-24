@@ -5,7 +5,8 @@ import uuid
 import struct
 from queue import Queue
 from typing import List
-from .strings import Strings
+from sixMans.strings import Strings
+from sixMans.views import GameMode
 
 log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
@@ -30,7 +31,7 @@ class SixMansQueue:
         players,
         gamesPlayed,
         maxSize,
-        teamSelection=Strings.RANDOM_TS,
+        teamSelection=GameMode.VOTE,
         category: discord.CategoryChannel = None,
         lobby_vc: discord.VoiceChannel = None,
     ):
@@ -43,7 +44,7 @@ class SixMansQueue:
         self.players = players
         self.gamesPlayed = gamesPlayed
         self.maxSize = maxSize
-        self.teamSelection = teamSelection
+        self.teamSelection: GameMode = teamSelection
         self.category = category
         self.lobby_vc = lobby_vc
         self.activeJoinLog = {}
@@ -84,23 +85,13 @@ class SixMansQueue:
         return messages
 
     async def set_team_selection(self, team_selection):
-        self.teamSelection = team_selection
-        emoji = self.get_ts_emoji()
-        if emoji:
-            await self.send_message(
-                "Queue Team Selection has been set to {} **{}**.".format(
-                    emoji, team_selection
-                )
-            )
-        else:
-            await self.send_message(
-                "Queue Team Selection has been set to **{}**.".format(team_selection)
-            )
-
-    def get_ts_emoji(self):
-        for key, value in SELECTION_MODES.items():
-            if value == self.teamSelection:
-                return self._get_pick_reaction(key)
+        self.teamSelection = GameMode(team_selection)
+        ts_embed = discord.Embed(
+            title="Success",
+            description=f"Queue default mode has been set to **{team_selection}**",
+            color=discord.Color.blue(),
+        )
+        await self.send_message(embed=ts_embed)
 
     def _get_pick_reaction(self, int_or_hex):
         try:
