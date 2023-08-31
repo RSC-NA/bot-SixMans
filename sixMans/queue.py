@@ -88,13 +88,11 @@ class SixMansQueue:
         emoji = self.get_ts_emoji()
         if emoji:
             await self.send_message(
-                "Queue Team Selection has been set to {} **{}**.".format(
-                    emoji, team_selection
-                )
+                f"Queue Team Selection has been set to {emoji} **{team_selection}**."
             )
         else:
             await self.send_message(
-                "Queue Team Selection has been set to **{}**.".format(team_selection)
+                f"Queue Team Selection has been set to **{team_selection}**."
             )
 
     def get_ts_emoji(self):
