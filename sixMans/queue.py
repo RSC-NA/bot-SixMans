@@ -10,6 +10,8 @@ from .game import Game
 import string
 import random
 import copy
+from sixMans.strings import Strings
+from sixMans.views import GameMode
 
 log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
@@ -27,25 +29,18 @@ SELECTION_MODES = {
 class SixMansQueue:
     def __init__(
         self,
+        name,
+        guild: discord.Guild,
+        channels: List[discord.TextChannel],
+        points,
+        players,
+        gamesPlayed,
+        maxSize,
         text_channel: discord.TextChannel,
-        helper_role=None,
-        automove=False,
-        info_message: discord.Message = None,
-        use_reactions=True,
-        observers=None,
-        points=None,
-        playerDB=None,
-        gamesPlayed=None,
-        maxSize=None,
-        teamSelection=Strings.RANDOM_TS,
+        teamSelection=GameMode.VOTE,
         lobby_vc: discord.VoiceChannel = None,
     ):
         self.id = self.make_name()
-        self.use_reactions = use_reactions
-        self.observers = observers
-        self.helper_role = helper_role
-        self.autoMove = automove
-        self.info_message = info_message
         self.points = points
         self.id = uuid.uuid4().int
         self.players = []
@@ -55,8 +50,9 @@ class SixMansQueue:
         self.playerDB = playerDB
         self.gamesPlayed = gamesPlayed
         self.maxSize = maxSize
-        self.teamSelection = teamSelection
         self.category = text_channel.category
+        self.teamSelection: GameMode = teamSelection
+
         self.lobby_vc = lobby_vc
         self.activeJoinLog = {}
         # TODO: active join log could maintain queue during downtime
@@ -282,16 +278,6 @@ class SixMansQueue:
                 f"Queue Team Selection has been set to **{team_selection}**."
             )
 
-    def get_ts_emoji(self):
-        """
-        Returns the emoji corresponding to the current team selection mode.
-
-        Returns:
-            str: The emoji representing the team selection mode.
-        """
-        for key, value in SELECTION_MODES.items():
-            if value == self.teamSelection:
-                return self._get_pick_reaction(key)
 
     def _get_pick_reaction(self, int_or_hex):
         """

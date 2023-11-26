@@ -11,13 +11,14 @@ from redbot.core import Config, checks, commands, app_commands
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
-from .game import Game
-from .queue import SixMansQueue
-from .strings import Strings
+from sixMans.game import Game
+from sixMans.queue import SixMansQueue
+from sixMans.strings import Strings
+from sixMans.views import GameMode, GameState
 
 log = logging.getLogger("red.RSC6Mans.sixMans")
 
-DEBUG = False
+DEBUG = True
 MINIMUM_GAME_TIME = 600  # Seconds (10 Minutes)
 PLAYER_TIMEOUT_TIME = (
     10 if DEBUG else 14400
@@ -28,20 +29,13 @@ CHANNEL_SLEEP_TIME = (
     5 if DEBUG else 30
 )  # How long channels will persist after a game's score has been reported (seconds)
 
-QTS_METHODS = [
-    Strings.VOTE_TS,
-    Strings.CAPTAINS_TS,
-    Strings.RANDOM_TS,
-    Strings.BALANCED_TS,
-    Strings.SELF_PICKING_TS,
-]  # , Strings.SHUFFLE_TS, Strings.BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
     "HelperRole": None,
     "AutoMove": False,
     "ReactToVote": True,
     "QLobby": None,
-    "DefaultTeamSelection": Strings.RANDOM_TS,
+    "DefaultTeamSelection": GameMode.VOTE,
     "DefaultQueueMaxSize": 6,
     "PlayerTimeout": PLAYER_TIMEOUT_TIME,
     "Games": {},
@@ -83,9 +77,8 @@ class SixMans(commands.Cog):
             self.player_timeout_time: dict[int] = {}
             self.queues_enabled: dict[bool] = {}
 
-            asyncio.create_task(self._pre_load_data())
-            self.timeout_tasks = {}
-            self.observers = set()
+        asyncio.create_task(self._pre_load_data())
+        self.timeout_tasks = {}
 
     def cog_unload(self):
         """Clean up when cog shuts down."""
@@ -280,6 +273,8 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
+        invalid_embed = discord.Embed(title="Error", color=discord.Color.red())
+
         six_mans_queue = None
         for queue in self.queues[ctx.guild]:
             if queue.name == queue_name:
@@ -287,24 +282,25 @@ class SixMans(commands.Cog):
                 break
 
         if six_mans_queue is None:
-            await ctx.send(f":x: No queue found with name: {queue_name}")
+            invalid_embed.description = f"No queue found with name: **{queue_name}**"
+            await ctx.send(embed=invalid_embed)
             return
 
         if six_mans_queue.maxSize == 2:
-            await ctx.send(
-                ":x: Queue with max size of 2 cannot change team selection method."
+            invalid_embed.description = (
+                "Queue with max size of 2 cannot change team selection method."
             )
+            await ctx.send(embed=invalid_embed)
             return
-
-        valid_ts = self.is_valid_ts(team_selection)
-        if valid_ts:
-            await six_mans_queue.set_team_selection(valid_ts)
+        # Set team selection method
+        try:
+            await six_mans_queue.set_team_selection(team_selection)
             await self._save_queues(ctx.guild, self.queues[ctx.guild])
-            await ctx.send("Done")
-        else:
-            await ctx.send(
-                f":x: **{team_selection}** is not a valid team selection method."
+        except ValueError:
+            invalid_embed.description = (
+                f"**{team_selection}** is an invalid team selection mode"
             )
+            await ctx.send(embed=invalid_embed)
 
     @commands.guild_only()
     @commands.command(aliases=["getQTS", "getQueueTeamSelection", "gqts"])
@@ -384,7 +380,7 @@ class SixMans(commands.Cog):
         await self._save_queue_max_size(ctx.guild, max_size)
 
         if max_size == 2:
-            await self._save_team_selection(ctx.guild, Strings.RANDOM_TS)
+            await self._save_team_selection(ctx.guild, GameMode.RANDOM)
 
         await ctx.send("Done")
 
@@ -400,7 +396,9 @@ class SixMans(commands.Cog):
                 break
 
         if six_mans_queue is None:
-            return await ctx.send(f":x: No queue found with name: {queue_name}")
+            return await ctx.send(
+                ":x: No queue found with name: {0}".format(queue_name)
+            )
 
         if max_size % 2 == 1:
             return await ctx.send(
@@ -410,7 +408,7 @@ class SixMans(commands.Cog):
         six_mans_queue.maxSize = max_size
 
         if max_size == 2:
-            await six_mans_queue.set_team_selection(Strings.RANDOM_TS)
+            await six_mans_queue.set_team_selection(GameMode.RANDOM)
 
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
@@ -435,7 +433,9 @@ class SixMans(commands.Cog):
                 break
 
         if six_mans_queue is None:
-            return await ctx.send(f":x: No queue found with name: {queue_name}")
+            return await ctx.send(
+                ":x: No queue found with name: {0}".format(queue_name)
+            )
 
         await ctx.send(f"{six_mans_queue.name} Queue Size: {six_mans_queue.maxSize}")
 
@@ -873,8 +873,8 @@ class SixMans(commands.Cog):
         ignore_call = (
             await self._is_react_to_vote(ctx.guild)
             or not game
-            or game.teamSelection != Strings.VOTE_TS
-            or game.state != Strings.TEAM_SELECTION_GS
+            or game.teamSelection != GameMode.VOTE
+            or game.state != GameState.NEW
         )
         if ignore_call:
             return
@@ -886,8 +886,8 @@ class SixMans(commands.Cog):
         ignore_call = (
             await self._is_react_to_vote(ctx.guild)
             or not game
-            or game.teamSelection != Strings.VOTE_TS
-            or game.state != Strings.TEAM_SELECTION_GS
+            or game.teamSelection != GameMode.VOTE
+            or game.state != GameState.NEW
         )
         if ignore_call:
             return
@@ -899,8 +899,8 @@ class SixMans(commands.Cog):
         ignore_call = (
             await self._is_react_to_vote(ctx.guild)
             or not game
-            or game.teamSelection != Strings.VOTE_TS
-            or game.state != Strings.TEAM_SELECTION_GS
+            or game.teamSelection != GameMode.VOTE
+            or game.state != GameState.NEW
         )
         if ignore_call:
             return
@@ -912,8 +912,8 @@ class SixMans(commands.Cog):
         ignore_call = (
             await self._is_react_to_vote(ctx.guild)
             or not game
-            or game.teamSelection != Strings.VOTE_TS
-            or game.state != Strings.TEAM_SELECTION_GS
+            or game.teamSelection != GameMode.VOTE
+            or game.state != GameState.NEW
         )
         if ignore_call:
             return
@@ -921,18 +921,9 @@ class SixMans(commands.Cog):
     # endregion player commands
 
     # region listeners
-    @commands.Cog.listener("on_reaction_add")
-    async def on_reaction_add(self, reaction, user):
-        return
-        # channel = reaction.message.channel
-        # if type(channel) == discord.DMChannel:
-        #    return
-        # await self.process_six_mans_reaction_add(
-        #    reaction.message, channel, user, reaction.emoji
-        # )
-
     @commands.Cog.listener("on_raw_reaction_add")
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        log.debug(f"Raw Reaction Add: {payload}")
         channel = self.bot.get_channel(payload.channel_id)
         if type(channel) == discord.DMChannel:
             return
@@ -944,18 +935,9 @@ class SixMans(commands.Cog):
 
         await self.process_six_mans_reaction_add(message, channel, user, payload.emoji)
 
-    @commands.Cog.listener("on_reaction_remove")
-    async def on_reaction_remove(self, reaction, user):
-        return
-        # if type(reaction.message.channel) == discord.DMChannel:
-        #    return
-
-        # await self.process_six_mans_reaction_removed(
-        #    reaction.message.channel, user, reaction.emoji
-        # )
-
     @commands.Cog.listener("on_raw_reaction_remove")
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        log.debug(f"Raw Reaction Remove: {payload}")
         channel = self.bot.get_channel(payload.channel_id)
         if type(channel) == discord.DMChannel:
             return
@@ -1402,14 +1384,13 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["setTeamSelection"])
     @checks.admin_or_permissions(manage_guild=True)
     async def setDefaultTeamSelection(self, ctx: Context, team_selection_method):
-        """Set method for Six Mans team selection (Default: Random)
+        """Set method for Six Mans team selection (Default: Vote)
 
         Valid team selecion methods options:
-        - **random**: selects random teams
-        - **captains**: selects a captain for each team
-        - **vote**: players vote for team selection method after queue pops
-        - **balanced (beta)**: creates balanced teams from all participating players
-        - ~~**shuffle**: selects random teams, but allows re-shuffling teams after they have been set~~
+        - **Random**: selects random teams
+        - **Captains**: selects a captain for each team
+        - **Vote**: players vote for team selection method after queue pops
+        - **Balanced**: creates balanced teams from all participating players
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         if await self._get_queue_max_size(ctx.guild) == 2:
@@ -1417,15 +1398,14 @@ class SixMans(commands.Cog):
                 ":x: You may not change team selection method when default queue max size is 2."
             )
 
-        team_selection_method = team_selection_method.title()
-        if team_selection_method not in QTS_METHODS:
+        try:
+            ts = GameMode(team_selection_method)
+            await self._save_team_selection(ctx.guild, team_selection_method)
+            await ctx.send("Done.")
+        except ValueError:
             return await ctx.send(
                 f"**{team_selection_method}** is not a valid method of team selection."
             )
-
-        await self._save_team_selection(ctx.guild, team_selection_method)
-
-        await ctx.send("Done.")
 
     @commands.guild_only()
     @commands.command(aliases=["getTeamSelection"])
@@ -1526,12 +1506,6 @@ class SixMans(commands.Cog):
 
         embed = self.embed_active_games(ctx.guild, queueGames)
         await ctx.channel.send(embed=embed)
-
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def observers(self, ctx: Context):
-        await ctx.send(f"There are {len(self.observers)} observers.")
 
     # endregion
 
@@ -1708,7 +1682,7 @@ class SixMans(commands.Cog):
         await asyncio.sleep(CHANNEL_SLEEP_TIME)
         q_lobby_vc = await self._get_q_lobby_vc(guild)
         if not game.scoreReported:
-            await game._notify(new_state=Strings.CANCELED_GS)
+            game.state = GameState.CANCELLED
         try:
             await game.textChannel.delete()
         except:
@@ -1727,7 +1701,7 @@ class SixMans(commands.Cog):
 
     def _get_opposing_captain(self, player: discord.Member, game: Game):
         opposing_captain = None
-        if game.state == Strings.TEAM_SELECTION_GS:
+        if game.state == GameState.NEW:
             players = list(game.players)
             players.remove(player)
             return random.choice(players)
@@ -1815,7 +1789,9 @@ class SixMans(commands.Cog):
             sorted_players, key=lambda x: x[1][Strings.PLAYER_POINTS_KEY], reverse=True
         )
 
-    async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue):
+    async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue) -> bool:
+        """Pop Queue"""
+        log.debug(f"Creating game. Guild: {ctx.guild.id} Queue: {six_mans_queue.name}")
         game = await self._create_game(ctx.guild, six_mans_queue, prefix=ctx.prefix)
         if game is None:
             return False
@@ -1826,12 +1802,6 @@ class SixMans(commands.Cog):
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
 
-        # Notify all players that queue has popped
-        # await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        # If using the above, convert to fstring
-
-        self.games[ctx.guild].append(game)
-        await self._save_games(ctx.guild, self.games[ctx.guild])
         return True
 
     async def _create_game(
@@ -1850,11 +1820,14 @@ class SixMans(commands.Cog):
             six_mans_queue,
             helper_role=await self._helper_role(guild),
             automove=await self._get_automove(guild),
-            use_reactions=await self._is_react_to_vote(guild),
-            observers=self.observers,
             prefix=prefix,
         )
         await game.create_game_channels(await self._category(guild))
+
+        log.debug(f"Saving game: {game.id} Players: {game.players}")
+        self.games[guild].append(game)
+        await self._save_games(guild, self.games[guild])
+
         await game.process_team_selection_method()
         return game
 
@@ -1876,19 +1849,11 @@ class SixMans(commands.Cog):
         return None, None
 
     def is_valid_ts(self, team_selection):
-        for ts in QTS_METHODS:
-            if team_selection.lower() == ts.lower():
-                return ts
-        return None
-
-    # adds observer
-    def add_observer(self, observer):
-        if observer not in self.observers:
-            self.observers.add(observer)
-
-    def remove_observer(self, observer):
-        while observer in self.observers:
-            self.observers.remove(observer)
+        try:
+            ts = GameMode(team_selection)
+            return ts
+        except ValueError:
+            return None
 
     def _get_game_and_queue(self, channel: discord.TextChannel):
         game = self._get_game_by_text_channel(channel)
@@ -1898,6 +1863,7 @@ class SixMans(commands.Cog):
             return None, None
 
     def _get_game_by_text_channel(self, channel: discord.TextChannel):
+        log.debug(f"Games: {self.games}")
         for game in self.games.get(channel.guild, []):
             if game.textChannel == channel:
                 return game
@@ -1932,49 +1898,19 @@ class SixMans(commands.Cog):
             emoji = emoji.name
 
         # Find Game
-        game = self._get_game_by_text_channel(channel)
-        game: Game
+        game: Game = self._get_game_by_text_channel(channel)
         if not game:
             return False
         if message != game.info_message:
             return False
 
-        team_selection_mode = game.teamSelection.lower()
-
-        if team_selection_mode == Strings.VOTE_TS.lower():
-            await game.process_team_select_vote(emoji, user)
-
-        elif team_selection_mode == Strings.CAPTAINS_TS.lower():
-            await game.process_captains_pick(emoji, user)
-
-        elif team_selection_mode == Strings.SELF_PICKING_TS.lower():
-            await game.process_self_picking_teams(emoji, user, True)
-
-        elif team_selection_mode == Strings.SHUFFLE_TS.lower():
-            if emoji is not Strings.SHUFFLE_REACT:
-                return
-
-            # Check if Shuffle is enabled
-            message = self.info_message
-            now = datetime.datetime.utcnow()
-            time_since_last_team = (now - message.created_at).seconds
-            time_since_q_pop = (now - message.channel.created_at).seconds
-            if time_since_q_pop > 300:
-                return await channel.send(
-                    ":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection."
-                )
-            if time_since_last_team > 180:
-                return await channel.send(
-                    ":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection."
-                )
-
-            count = len(
-                [reaction for reaction in message.reactions if reaction.emoji == emoji]
-            )
-            shuffle_players = count >= int(len(game.players) / 2) + 1
-            if shuffle_players:
-                await channel.send(f"{Strings.SHUFFLE_REACT} _Generating New teams..._")
-                await game.shuffle_players()
+        match game.teamSelection:
+            case GameMode.VOTE:
+                await game.process_team_select_vote(emoji, user)
+            case GameMode.CAPTAINS:
+                await game.process_captains_pick(emoji, user)
+            case GameMode.SELF_PICK:
+                await game.process_self_picking_teams(emoji, user, True)
 
     async def process_six_mans_reaction_removed(
         self, channel: discord.TextChannel, user: discord.User, emoji
@@ -1992,10 +1928,10 @@ class SixMans(commands.Cog):
             if not game:
                 return False
 
-            if game.teamSelection.lower() == Strings.VOTE_TS.lower():
+            if game.teamSelection == GameMode.VOTE:
                 await game.process_team_select_vote(emoji, user, added=False)
 
-            elif game.teamSelection.lower() == Strings.SELF_PICKING_TS.lower():
+            elif game.teamSelection == GameMode.SELF_PICK:
                 await game.process_self_picking_teams(emoji, user, False)
         except:
             pass
@@ -2343,12 +2279,12 @@ class SixMans(commands.Cog):
                     if q.id == queueId:
                         queue = q
 
+                log.debug(f"Loading game players: {players}")
                 game = Game(
                     players,
                     queue,
                     text_channel=text_channel,
                     voice_channels=voice_channels,
-                    observers=self.observers,
                 )
                 game.id = int(key)
                 game.captains = [guild.get_member(x) for x in value["Captains"]]
@@ -2356,22 +2292,22 @@ class SixMans(commands.Cog):
                 game.orange = set([guild.get_member(x) for x in value["Orange"]])
                 game.roomName = value["RoomName"]
                 game.roomPass = value["RoomPass"]
-                game.use_reactions = value["UseReactions"]
                 game.prefix = value["Prefix"]
-
-                log.debug(f"ID: {game.id} game.textChannel: {game.textChannel}")
-                try:
-                    game.info_message = await game.textChannel.fetch_message(
-                        value["InfoMessage"]
-                    )
-                    game.teamSelection = value["TeamSelection"]
-                except:
-                    game.teamSelection = game.queue.teamSelection
-                    await game.process_team_selection_method()
+                game.teamSelection = value["TeamSelection"]
                 game.scoreReported = value["ScoreReported"]
-                game_list.append(game)
 
+                log.debug(
+                    f"Guild: {guild.id} ID: {game.id} game.textChannel: {game.textChannel} State: {game.state} Mode: {game.teamSelection}"
+                )
+                game_list.append(game)
+            log.debug(f"Preloaded Games: {game_list}")
             self.games[guild] = game_list
+            await self._save_games(guild, self.games[guild])
+
+            # # Start games again if needed.
+            # for g in self.games[guild]:
+            #     if g.state == GameState.NEW:
+            #         asyncio.create_task(g.process_team_selection_method())
 
     async def _clear_all_data(self, guild: discord.Guild):
         await self._save_games(guild, [])
@@ -2384,7 +2320,7 @@ class SixMans(commands.Cog):
         await self._save_queue_max_size(guild, 6)
         await self._save_player_timeout(guild, PLAYER_TIMEOUT_TIME)
         await self._save_helper_role(guild, None)
-        await self._save_team_selection(guild, Strings.RANDOM_TS)
+        await self._save_team_selection(guild, GameMode.VOTE)
         await self._save_react_to_vote(guild, True)
         await self._save_automove(guild, False)
 
@@ -2392,6 +2328,7 @@ class SixMans(commands.Cog):
         return await self.config.guild(guild).Games()
 
     async def _save_games(self, guild: discord.Guild, games: List[Game]):
+        log.debug(f"Saving games. Guild: {guild.id} Game: {games}")
         game_dict = {}
         for game in games:
             game_dict[game.id] = game._to_dict()

@@ -1,15 +1,17 @@
 import random
 import struct
 import logging
-from typing import List
 import uuid
 import asyncio
 import operator
 import discord
 from itertools import combinations
 
-from .strings import Strings
-from .queue import SixMansQueue
+from sixMans.strings import Strings
+from sixMans.queue import SixMansQueue
+from sixMans.views import GameModeVote, GameMode, GameState, CaptainsView
+
+from typing import Union, List
 
 log = logging.getLogger("red.RSC6Mans.sixMans.game")
 
@@ -25,28 +27,18 @@ class Game:
     def __init__(
         # To be made from queue
         self,
-        name,
-        id,
-        players,
-        playerDB,
-        points,
-        text_channel: discord.TextChannel,
-        teamSelection,
-        max_size,
-        helper_role=None,
-        automove=False,
+        queue: SixMansQueue,
+        helper_role: discord.Role = None,
+        automove: bool = False,
+        text_channel: discord.TextChannel = None,
         voice_channels: List[discord.VoiceChannel] = [],
         info_message: discord.Message = None,
-        use_reactions=True,
-        observers=None,
+        prefix: str = "?",
+        playerDB: List[Union[discord.Member, discord.User]] = [],
     ):
         # TODO Make Voice channels when game is created
         prefix = "?"
-        self.teamSelection = teamSelection
-        self.name = name
         self.id = id
-        self.points = points
-        self.players = players
         self.playerDB = set(playerDB)
         self.player_votes = {}
         self.captains = []
@@ -54,13 +46,13 @@ class Game:
         self.orange = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.use_reactions = use_reactions
+        self.queue = queue
         self.scoreReported = False
-        self.teamSelection = players.teamSelection
-        self.state = Strings.TEAM_SELECTION_GS
+        self.teamSelection: GameMode = queue.teamSelection
+        self.state: GameState = GameState.NEW
+        self.prefix = prefix
         self.reaction_lock = False
-        self.text_channel, self.voice_channels = self.mkChannels(players)
-        self.category = text_channel.category
+        log.debug(f"Game created. ID: {self.id} Players: {self.players}")
 
         # Optional params
         self.helper_role = helper_role
@@ -70,23 +62,6 @@ class Game:
             voice_channels  # List of voice channels: [Blue, Orange, General]
         )
         self.info_message = info_message
-        self.observers = observers if observers else []
-
-        # attatch listeners to game
-        for observer in self.observers:
-            observer._subject = self
-
-        asyncio.create_task(self._notify())
-
-    async def _notify(self, new_state=None):
-        if new_state:
-            self.state = new_state
-        for observer in self.observers:
-            try:
-                await observer.update(self)
-            except:
-                # TODO: Log error without preventing code from continuing to run
-                pass
 
     # Team Management
     async def create_game_channels(self, category=None):
@@ -232,46 +207,64 @@ class Game:
                     pass
 
     # Team Selection
-    async def vote_team_selection(self, helper_role=None):
-        """
-        Sends a vote for team selection message and adds reactions to it.
+    async def vote_team_selection(self):
+        """Start a vote for game mode."""
+        vote_view = GameModeVote(self)
+        await vote_view.start()
+        await vote_view.wait()
 
-        Args:
-            helper_role (Optional[str]): The role of the helper. Defaults to None.
-        """
-        # Mentions all players
-        embed = self._get_vote_embed()
-        self.info_message = await self.textChannel.send(embed=embed)
-        reacts = [hex(key) for key in SELECTION_MODES.keys()]
-        await self._add_reactions(reacts, self.info_message)
+        if not vote_view.result:
+            # Vote failed. We need to decide what to do here.
+            await self.textChannel.send("Error during game mode vote... Please report.")
+            return
+
+        self.teamSelection = vote_view.result
+
+        # Dispatch
+        match self.teamSelection:
+            case GameMode.CAPTAINS:
+                await self.captains_pick_teams(self.helper_role)
+            case GameMode.RANDOM:
+                await self.pick_random_teams()
+            case GameMode.SELF_PICK:
+                await self.self_picking_teams()
+            case GameMode.BALANCED:
+                await self.pick_balanced_teams()
+            case _:
+                log.error(f"Error during game mode vote: {vote_view.result}")
 
     async def captains_pick_teams(self, helper_role=None):
-        if not helper_role:
-            helper_role = self.helper_role
+        """Initiate Captains Game Mode"""
+        log.debug(f"self.players: {type(self.players)} {self.players}")
+        captains_view = CaptainsView(self)
+        await captains_view.start()
+        await captains_view.wait()
+        # if not helper_role:
+        #     helper_role = self.helper_role
 
-        # Pick captains
-        log.debug(f"Picking captains from: {self.players}")
-        self.captains = random.sample(list(self.players), 2)
-        self.blue.add(self.captains[0])
-        self.orange.add(self.captains[1])
-        self.helper_role = helper_role
+        # # Pick captains
+        # log.debug(f"Picking captains from: {self.players}")
+        # self.captains = random.sample(list(self.players), 2)
+        # self.blue.add(self.captains[0])
+        # self.orange.add(self.captains[1])
+        # self.helper_role = helper_role
 
-        pickable = list(self.players)
-        pickable.remove(self.captains[0])
-        pickable.remove(self.captains[1])
+        # pickable = list(self.players)
+        # pickable.remove(self.captains[0])
+        # pickable.remove(self.captains[1])
 
-        # Assign reactions to remaining players
-        self.react_player_picks = {}
-        react_hex = 0x1F1E6
-        for i in range(len(pickable)):
-            react_hex_i = hex(react_hex + i)
-            self.react_player_picks[react_hex_i] = pickable[i]
+        # # Assign reactions to remaining players
+        # self.react_player_picks = {}
+        # react_hex = 0x1F1E6
+        # for i in range(len(pickable)):
+        #     react_hex_i = hex(react_hex + i)
+        #     self.react_player_picks[react_hex_i] = pickable[i]
 
-        # Get player pick embed
-        embed = self._get_captains_embed("blue")
-        self.info_message = await self.textChannel.send(embed=embed)
+        # # Get player pick embed
+        # embed = self._get_captains_embed("blue")
+        # self.info_message = await self.textChannel.send(embed=embed)
 
-        await self._add_reactions(self.react_player_picks.keys(), self.info_message)
+        # await self._add_reactions(self.react_player_picks.keys(), self.info_message)
 
     async def pick_random_teams(self):
         self.blue = set()
@@ -285,7 +278,7 @@ class Game:
         self.get_new_captains_from_teams()
         await self.update_player_perms()
         await self.update_game_info()
-        await self._notify(Strings.ONGOING_GS)
+        self.state = GameState.ONGOING
 
     async def self_picking_teams(self):
         embed = self._get_spt_embed()
@@ -298,7 +291,7 @@ class Game:
         balanced_teams, balance_score = self.get_balanced_teams()
         self.balance_score = balance_score
         # Pick random balanced team
-        blue = random.choice(balanced_teams)
+        blur = random.choice(balanced_teams)
         orange = []
         for player in self.players:
             if player not in blue:
@@ -312,7 +305,7 @@ class Game:
         self.get_new_captains_from_teams()
         await self.update_player_perms()
         await self.update_game_info()
-        await self._notify(Strings.ONGOING_GS)
+        self.state = GameState.ONGOING
 
     async def shuffle_players(self):
         await self.pick_random_teams()
@@ -325,25 +318,25 @@ class Game:
         self.full_player_reset()
         team_selection = team_selection.lower()
         helper_role = self.helper_role
-        if team_selection == Strings.VOTE_TS.lower():
-            await self.vote_team_selection()
-        elif team_selection == Strings.CAPTAINS_TS.lower():
-            await self.captains_pick_teams(helper_role)
-        elif team_selection == Strings.RANDOM_TS.lower():
-            await self.pick_random_teams()
-        elif team_selection == Strings.SHUFFLE_TS.lower():
-            await self.shuffle_players()
-        elif team_selection == Strings.BALANCED_TS.lower():
-            await self.pick_balanced_teams()
-        elif team_selection == Strings.SELF_PICKING_TS.lower():
-            await self.self_picking_teams()
-        elif team_selection == Strings.DEFAULT_TS.lower():
-            if self.queue.teamSelection.lower() != team_selection:
-                return self.process_team_selection_method(self.queue.teamSelection)
-            guild_ts = await self._guild_team_selection()
-            return self.process_team_selection_method(guild_ts)
-        else:
-            return print(f"you messed up fool: {self.teamSelection}")
+        match self.teamSelection:
+            case GameMode.VOTE:
+                await self.vote_team_selection()
+            case GameMode.CAPTAINS:
+                await self.captains_pick_teams(helper_role)
+            case GameMode.RANDOM:
+                await self.pick_random_teams()
+            case GameMode.SELF_PICK:
+                await self.self_picking_teams()
+            case GameMode.BALANCED:
+                await self.pick_balanced_teams()
+            case GameMode.DEFAULT:
+                if self.queue.teamSelection.lower() != team_selection:
+                    return self.process_team_selection_method(self.queue.teamSelection)
+                guild_ts = await self._guild_team_selection()
+                return self.process_team_selection_method(guild_ts)
+            case _:
+                # End game here potentially?
+                log.error(f"Error processing team selection mode: {self.teamSelection}")
 
     async def process_captains_pick(self, emoji, user):
         teams_complete = False
@@ -402,13 +395,13 @@ class Game:
             self.reset_players()
             await self.update_player_perms()
             await self.update_game_info()
-            await self._notify(Strings.ONGOING_GS)
+            self.state = GameState.ONGOING
 
         return teams_complete
 
     async def process_self_picking_teams(self, emoji, user, added=True):
         self.info_message = await self.textChannel.fetch_message(self.info_message.id)
-        if self.state != Strings.TEAM_SELECTION_GS:
+        if self.state != GameState.New:
             return False
 
         if user not in set(list(self.blue) + list(self.orange) + list(self.players)):
@@ -480,7 +473,7 @@ class Game:
             self.get_new_captains_from_teams()
             await self.update_player_perms()
             await self.update_game_info()
-            await self._notify(Strings.ONGOING_GS)
+            self.state = GameState.ONGOING
 
     async def _remove_stale_reactions(self, emoji_hex: int, member: discord.Member):
         """
@@ -576,7 +569,7 @@ class Game:
                 balanced_teams = [a_team]
 
         # return balanced team
-        self._notify(Strings.ONGOING_GS)
+        self.state = GameState.ONGOING
         return balanced_teams, team_diff
 
     def get_player_scores(self):
@@ -629,7 +622,7 @@ class Game:
         self.winner = winner
         await self.color_embed_for_winners(winner)
         self.scoreReported = True
-        await self._notify(new_state=Strings.GAME_OVER_GS)
+        self.state = GameState.COMPLETE
 
     def _get_pick_reaction(self, int_or_hex):
         try:
@@ -935,9 +928,11 @@ class Game:
     def _get_spt_embed(self):
         placed = len(self.blue) + len(self.orange)
         embed = discord.Embed(
-            title=f"{self.textChannel.name.replace('-', ' ').title()[4:]} Game | Team Selection",
-            color=self._get_completion_color(placed, self.queue.maxSize - placed),
+            title="{} Game | Team Selection".format(
+                self.textChannel.name.replace("-", " ").title()[4:]
+            ),
             description="React :orange_circle: with or :blue_circle: to pick your team!",
+            color=discord.Color.blue(),
         )
         embed.set_thumbnail(url=self.queue.guild.icon.url)
 
@@ -1077,7 +1072,6 @@ class Game:
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
             "TeamSelection": self.teamSelection,
-            "UseReactions": self.use_reactions,
             "State": self.state,
             "Prefix": self.prefix,
         }
