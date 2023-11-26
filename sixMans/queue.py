@@ -6,6 +6,10 @@ import struct
 from queue import Queue
 from typing import List
 from .strings import Strings
+from .game import Game
+import string
+import random
+import copy
 
 log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
@@ -22,54 +26,178 @@ SELECTION_MODES = {
 
 class SixMansQueue:
     def __init__(
-            self,
-            name,
-            guild: discord.Guild,
-            channels: List[discord.TextChannel],
-            points,
-            players,
-            gamesPlayed,
-            maxSize,
-            teamSelection=Strings.RANDOM_TS,
-            category: discord.CategoryChannel = None,
-            lobby_vc: discord.VoiceChannel = None,
-        ):
-            """
-            Initializes a Queue object.
+        self,
+        text_channel: discord.TextChannel,
+        helper_role=None,
+        automove=False,
+        info_message: discord.Message = None,
+        use_reactions=True,
+        observers=None,
+        points=None,
+        playerDB=None,
+        gamesPlayed=None,
+        maxSize=None,
+        teamSelection=Strings.RANDOM_TS,
+        lobby_vc: discord.VoiceChannel = None,
+    ):
+        self.id = self.make_name()
+        self.use_reactions = use_reactions
+        self.observers = observers
+        self.helper_role = helper_role
+        self.autoMove = automove
+        self.info_message = info_message
+        self.points = points
+        self.id = uuid.uuid4().int
+        self.players = []
+        self.guild = text_channel.guild
+        self.text_channel: discord.TextChannel = text_channel
+        self.points = points
+        self.playerDB = playerDB
+        self.gamesPlayed = gamesPlayed
+        self.maxSize = maxSize
+        self.teamSelection = teamSelection
+        self.category = text_channel.category
+        self.lobby_vc = lobby_vc
+        self.activeJoinLog = {}
+        # TODO: active join log could maintain queue during downtime
 
-            Args:
-                name (str): The name of the queue.
-                guild (discord.Guild): The guild the queue belongs to.
-                channels (List[discord.TextChannel]): The text channels associated with the queue.
-                points: The points of the queue.
-                players: The players in the queue.
-                gamesPlayed: The number of games played in the queue.
-                maxSize: The maximum size of the queue.
-                teamSelection (str, optional): The team selection method. Defaults to Strings.RANDOM_TS.
-                category (discord.CategoryChannel, optional): The category channel associated with the queue. Defaults to None.
-                lobby_vc (discord.VoiceChannel, optional): The lobby voice channel associated with the queue. Defaults to None.
-            """
-            self.id = uuid.uuid4().int
-            self.name = name
-            self.queue = PlayerQueue()
-            self.guild = guild
-            self.channels = channels
-            self.points = points
-            self.players = players
-            self.gamesPlayed = gamesPlayed
-            self.maxSize = maxSize
-            self.teamSelection = teamSelection
-            self.category = category
-            self.lobby_vc = lobby_vc
-            self.activeJoinLog = {}
-            # TODO: active join log could maintain queue during downtime
+    def make_name(self):
+        """
+        Generates a random name from a predefined list of words.
+
+        Returns:
+            str: A randomly chosen name.
+        """
+        lAndD = [
+            "apple",
+            "book",
+            "chair",
+            "desk",
+            "egg",
+            "fish",
+            "goat",
+            "hand",
+            "idea",
+            "jump",
+            "king",
+            "lake",
+            "moon",
+            "nose",
+            "open",
+            "park",
+            "queen",
+            "rock",
+            "star",
+            "tree",
+            "under",
+            "vase",
+            "wolf",
+            "x-ray",
+            "year",
+            "zoo",
+            "aunt",
+            "bird",
+            "cloud",
+            "duck",
+            "earth",
+            "frog",
+            "gift",
+            "hill",
+            "inch",
+            "juice",
+            "kite",
+            "lion",
+            "mango",
+            "note",
+            "owl",
+            "peach",
+            "quilt",
+            "rain",
+            "sun",
+            "tiger",
+            "umbra",
+            "vest",
+            "wind",
+            "box",
+            "cat",
+            "dog",
+            "eel",
+            "fox",
+            "gold",
+            "hat",
+            "ice",
+            "joke",
+            "key",
+            "lamb",
+            "mice",
+            "nest",
+            "oak",
+            "pine",
+            "queen",
+            "rose",
+            "seed",
+            "tent",
+            "urge",
+            "vine",
+            "wave",
+            "xerox",
+            "yoga",
+            "zebra",
+            "apple",
+            "bear",
+            "cake",
+            "deer",
+            "egg",
+            "girl",
+            "hat",
+            "ink",
+            "joke",
+            "kite",
+            "lamp",
+            "moon",
+            "nest",
+            "oar",
+            "park",
+            "herp",
+            "derp",
+            "quilt",
+        ]
+        name = random.choice(lAndD)
+        return name
 
     def _put(self, player):
-        self.queue.put(player)
+        """
+        Add a player to the queue.
+
+        Args:
+            player (Player): The player to be added to the queue.
+
+        Returns:
+            Game or None: If the queue is full after adding the player, returns a new Game object. Otherwise, returns None.
+        """
+        self.players.append(player)
         # self.activeJoinLog[player.id] = datetime.datetime.now()
+        if self._queue_full():
+            return Game(
+                self.name,
+                self.id,
+                self.players,
+                self.points,
+                self.playerDB,
+                self.gamesPlayed,
+                self.teamSelection,
+            )
+        else:
+            return None
 
     def _get(self):
-        player = self.queue.get()
+        """
+        Retrieves and removes a player from the queue.
+
+        Returns:
+            Player: The player object that was removed from the queue.
+        """
+        player = self.players.pop(self.players.__len__ - 1)
         try:
             del self.activeJoinLog[player.id]
         except:
@@ -77,28 +205,72 @@ class SixMansQueue:
         return player
 
     def get_player_summary(self, player: discord.User):
+        """
+        Retrieves the player summary from the player database.
+
+        Args:
+            player (discord.User): The Discord user object representing the player.
+
+        Returns:
+            dict or None: The player summary if found in the database, None otherwise.
+        """
         try:
-            return self.players[str(player.id)]
+            return self.playerDB[str(player.id)]
         except:
             return None
 
-    def _remove(self, player):
-        self.queue._remove(player)
+    def _remove(self, player: discord.User):
+        """
+        Removes a player from the queue.
+
+        Args:
+            player (discord.User): The player to be removed.
+
+        Returns:
+            None
+        """
+        if player in self.players:
+            self.players.remove(player)
         try:
             del self.activeJoinLog[player.id]
         except:
             pass
 
     def _queue_full(self):
-        return self.queue.qsize() >= self.maxSize
+        """
+        Check if the queue is full.
+
+        Returns:
+            bool: True if the queue is full, False otherwise.
+        """
+        return self.players.__len__ >= self.maxSize
 
     async def send_message(self, message="", embed=None):
+        """
+        Sends a message to all the channels in the queue.
+
+        Args:
+            message (str): The message to send (default is an empty string).
+            embed (discord.Embed): The embed to send (default is None).
+
+        Returns:
+            list: A list of messages sent to each channel.
+        """
         messages = []
         for channel in self.channels:
             messages.append(await channel.send(message, embed=embed))
         return messages
 
     async def set_team_selection(self, team_selection):
+        """
+        Sets the team selection for the queue.
+
+        Parameters:
+        - team_selection (str): The team selection to be set.
+
+        Returns:
+        None
+        """
         self.teamSelection = team_selection
         emoji = self.get_ts_emoji()
         if emoji:
@@ -111,22 +283,42 @@ class SixMansQueue:
             )
 
     def get_ts_emoji(self):
+        """
+        Returns the emoji corresponding to the current team selection mode.
+
+        Returns:
+            str: The emoji representing the team selection mode.
+        """
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
 
     def _get_pick_reaction(self, int_or_hex):
+        """
+        Converts an integer or hexadecimal value to a corresponding UTF-32LE encoded string.
+
+        Args:
+            int_or_hex (int or str): The integer or hexadecimal value to convert.
+
+        Returns:
+            str: The UTF-32LE encoded string representation of the input value, or None if conversion fails.
+        """
         try:
             if type(int_or_hex) == int:
                 return struct.pack("<I", int_or_hex).decode("utf-32le")
             if type(int_or_hex) == str:
-                return struct.pack("<I", int(int_or_hex, base=16)).decode(
-                    "utf-32le"
-                )  # i == react_hex
+                return struct.pack("<I", int(int_or_hex, base=16)).decode("utf-32le")
         except:
             return None
 
     def _to_dict(self):
+        """
+        Converting Name, Channels, Points, Players, GamesPlayed, TeamSelection, and MaxSize of the queue
+            object into to a dictionary.
+
+        Returns:
+            dict: A dictionary representation of the queue object's Name, Channels, Points, Players, GamesPlayed, TeamSelection, and MaxSize.
+        """
         q_data = {
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
@@ -143,135 +335,90 @@ class SixMansQueue:
 
         return q_data
 
-
-class PlayerQueue(Queue):
-    def _init(self, maxsize):
-        self.queue = OrderedSet()
-
-    def _put(self, item):
-        self.queue.add(item)
-
-    def _get(self):
-        return self.queue.pop()
-
-    def _remove(self, value):
-        self.queue.remove(value)
-
-    def __contains__(self, item):
-        with self.mutex:
-            return item in self.queue
-
-
-class OrderedSet(collections.abc.MutableSet):
-    """
-    A set-like object that maintains the order of elements.
-    """
-
-    def __init__(self, iterable=None):
+    def has_player(self, player):
         """
-        Initialize the OrderedSet.
+        Check if a player is in the queue.
 
         Args:
-            iterable: An iterable object to initialize the OrderedSet. (default: None)
-        """
-        self.end = end = []
-        end += [None, end, end]  # sentinel node for doubly linked list
-        self.map = {}  # key --> [key, prev, next]
-        if iterable is not None:
-            self |= iterable
-
-    def __len__(self):
-        """
-        Get the length of the OrderedSet.
+            player: The player to check.
 
         Returns:
-            The number of elements in the OrderedSet.
+            True if the player is in the queue, False otherwise.
         """
-        return len(self.map)
+        return player in self.players
 
-    def __contains__(self, key):
+    def __contains__(self, player):
         """
-        Check if the OrderedSet contains a specific key.
+        Check if a player is in the queue.
 
         Args:
-            key: The key to check.
+            item: The player to check.
 
         Returns:
-            True if the key is in the OrderedSet, False otherwise.
+            True if the player is in the queue, False otherwise.
         """
-        return key in self.map
-
-    def add(self, key):
-        """
-        Add a key to the OrderedSet.
-
-        Args:
-            key: The key to add.
-        """
-        if key not in self.map:
-            end = self.end
-            curr = end[1]
-            curr[2] = end[1] = self.map[key] = [key, curr, end]
-
-    def discard(self, key):
-        """
-        Remove a key from the OrderedSet if it exists.
-
-        Args:
-            key: The key to remove.
-        """
-        if key in self.map:
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
+        return player in self.players
 
     def __iter__(self):
         """
-        Iterate over the elements of the OrderedSet.
-
-        Yields:
-            The next element in the OrderedSet.
+        Returns an iterator object that iterates over the elements in the queue.
         """
-        end = self.end
-        curr = end[2]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[2]
+        return iter(self.players)
 
-    def __reversed__(self):
+    def __len__(self):
         """
-        Iterate over the elements of the OrderedSet in reverse order.
+        Returns the length of the queue.
+        """
+        return len(self.players)
 
-        Yields:
-            The next element in the OrderedSet in reverse order.
+    def __eq__(self, sel):
         """
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-
-    def __repr__(self):
-        """
-        Get a string representation of the OrderedSet.
-
-        Returns:
-            A string representation of the OrderedSet.
-        """
-        if not self:
-            return "%s()" % (self.__class__.__name__,)
-        return "%s(%r)" % (self.__class__.__name__, list(self))
-
-    def __eq__(self, other):
-        """
-        Check if the OrderedSet is equal to another object.
+        Check if the queue is equal to another object.
 
         Args:
-            other: The object to compare with.
+            sel: The object to compare with.
 
         Returns:
-            True if the OrderedSet is equal to the other object, False otherwise.
+            True if the queue is equal to the other object, False otherwise.
         """
-        if isinstance(other, OrderedSet):
-            return len(self) == len(other) and list(self) == list(other)
-        return set(self) == set(other)
+        return (
+            (self.name == sel.name)
+            and (self.channels == sel.channels)
+            and (self.points == sel.points)
+            and (self.players == sel.players)
+            and (self.gamesPlayed == sel.gamesPlayed)
+            and (self.teamSelection == sel.teamSelection)
+            and (self.maxSize == sel.maxSize)
+            and (self.category == sel.category)
+            and (self.lobby_vc == sel.lobby_vc)
+        )
+
+    async def makeGame(self):
+        """
+        Creates a new game instance with the current queue information.
+
+        Returns:
+            Game: The newly created game instance.
+        """
+        return Game(
+            self.name,
+            self.id,
+            self.players,
+            self.playerDB,
+            self.points,
+            self.text_channel,
+            self.teamSelection,
+            self.maxSize,
+        )
+
+    async def makeGame(self):
+        return Game(
+            self.name,
+            self.id,
+            self.players,
+            self.playerDB,
+            self.points,
+            self.text_channel,
+            self.teamSelection,
+            self.maxSize,
+        )
