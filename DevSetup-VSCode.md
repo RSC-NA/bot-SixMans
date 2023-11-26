@@ -61,7 +61,7 @@ This set of instructions informs developers how to configure their dev environme
 
 1. Enter Virtual Environment:
 
-    `$ & c:/Users/<path_to_project>/.venv/Scripts/Activate.ps1`
+    `source /mnt/c/Users/andre/Desktop/"Everything Coding"/RSC-Main/"RSC 6-mans"/bot-SixMans/.venv/bin/activate`
 
 1. Run Bot Instance:
 

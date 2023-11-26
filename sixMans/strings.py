@@ -27,7 +27,7 @@ class Strings:
     ONGOING_GS = "ongoing"
     CANCELED_GS = "canceled"
     GAME_OVER_GS = "game over"
-
+    
     # Messages
     more_sixmans_info_helper = """If you need any help or have questions please contact someone with the {helper} role."""
 

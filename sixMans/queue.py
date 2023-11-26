@@ -22,32 +22,47 @@ SELECTION_MODES = {
 
 class SixMansQueue:
     def __init__(
-        self,
-        name,
-        guild: discord.Guild,
-        channels: List[discord.TextChannel],
-        points,
-        players,
-        gamesPlayed,
-        maxSize,
-        teamSelection=Strings.RANDOM_TS,
-        category: discord.CategoryChannel = None,
-        lobby_vc: discord.VoiceChannel = None,
-    ):
-        self.id = uuid.uuid4().int
-        self.name = name
-        self.queue = PlayerQueue()
-        self.guild = guild
-        self.channels = channels
-        self.points = points
-        self.players = players
-        self.gamesPlayed = gamesPlayed
-        self.maxSize = maxSize
-        self.teamSelection = teamSelection
-        self.category = category
-        self.lobby_vc = lobby_vc
-        self.activeJoinLog = {}
-        # TODO: active join log could maintain queue during downtime
+            self,
+            name,
+            guild: discord.Guild,
+            channels: List[discord.TextChannel],
+            points,
+            players,
+            gamesPlayed,
+            maxSize,
+            teamSelection=Strings.RANDOM_TS,
+            category: discord.CategoryChannel = None,
+            lobby_vc: discord.VoiceChannel = None,
+        ):
+            """
+            Initializes a Queue object.
+
+            Args:
+                name (str): The name of the queue.
+                guild (discord.Guild): The guild the queue belongs to.
+                channels (List[discord.TextChannel]): The text channels associated with the queue.
+                points: The points of the queue.
+                players: The players in the queue.
+                gamesPlayed: The number of games played in the queue.
+                maxSize: The maximum size of the queue.
+                teamSelection (str, optional): The team selection method. Defaults to Strings.RANDOM_TS.
+                category (discord.CategoryChannel, optional): The category channel associated with the queue. Defaults to None.
+                lobby_vc (discord.VoiceChannel, optional): The lobby voice channel associated with the queue. Defaults to None.
+            """
+            self.id = uuid.uuid4().int
+            self.name = name
+            self.queue = PlayerQueue()
+            self.guild = guild
+            self.channels = channels
+            self.points = points
+            self.players = players
+            self.gamesPlayed = gamesPlayed
+            self.maxSize = maxSize
+            self.teamSelection = teamSelection
+            self.category = category
+            self.lobby_vc = lobby_vc
+            self.activeJoinLog = {}
+            # TODO: active join log could maintain queue during downtime
 
     def _put(self, player):
         self.queue.put(player)
@@ -148,7 +163,17 @@ class PlayerQueue(Queue):
 
 
 class OrderedSet(collections.abc.MutableSet):
+    """
+    A set-like object that maintains the order of elements.
+    """
+
     def __init__(self, iterable=None):
+        """
+        Initialize the OrderedSet.
+
+        Args:
+            iterable: An iterable object to initialize the OrderedSet. (default: None)
+        """
         self.end = end = []
         end += [None, end, end]  # sentinel node for doubly linked list
         self.map = {}  # key --> [key, prev, next]
@@ -156,24 +181,57 @@ class OrderedSet(collections.abc.MutableSet):
             self |= iterable
 
     def __len__(self):
+        """
+        Get the length of the OrderedSet.
+
+        Returns:
+            The number of elements in the OrderedSet.
+        """
         return len(self.map)
 
     def __contains__(self, key):
+        """
+        Check if the OrderedSet contains a specific key.
+
+        Args:
+            key: The key to check.
+
+        Returns:
+            True if the key is in the OrderedSet, False otherwise.
+        """
         return key in self.map
 
     def add(self, key):
+        """
+        Add a key to the OrderedSet.
+
+        Args:
+            key: The key to add.
+        """
         if key not in self.map:
             end = self.end
             curr = end[1]
             curr[2] = end[1] = self.map[key] = [key, curr, end]
 
     def discard(self, key):
+        """
+        Remove a key from the OrderedSet if it exists.
+
+        Args:
+            key: The key to remove.
+        """
         if key in self.map:
             key, prev, next = self.map.pop(key)
             prev[2] = next
             next[1] = prev
 
     def __iter__(self):
+        """
+        Iterate over the elements of the OrderedSet.
+
+        Yields:
+            The next element in the OrderedSet.
+        """
         end = self.end
         curr = end[2]
         while curr is not end:
@@ -181,6 +239,12 @@ class OrderedSet(collections.abc.MutableSet):
             curr = curr[2]
 
     def __reversed__(self):
+        """
+        Iterate over the elements of the OrderedSet in reverse order.
+
+        Yields:
+            The next element in the OrderedSet in reverse order.
+        """
         end = self.end
         curr = end[1]
         while curr is not end:
@@ -188,11 +252,26 @@ class OrderedSet(collections.abc.MutableSet):
             curr = curr[1]
 
     def __repr__(self):
+        """
+        Get a string representation of the OrderedSet.
+
+        Returns:
+            A string representation of the OrderedSet.
+        """
         if not self:
             return "%s()" % (self.__class__.__name__,)
         return "%s(%r)" % (self.__class__.__name__, list(self))
 
     def __eq__(self, other):
+        """
+        Check if the OrderedSet is equal to another object.
+
+        Args:
+            other: The object to compare with.
+
+        Returns:
+            True if the OrderedSet is equal to the other object, False otherwise.
+        """
         if isinstance(other, OrderedSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)

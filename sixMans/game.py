@@ -23,33 +23,44 @@ SELECTION_MODES = {
 
 class Game:
     def __init__(
+        # To be made from queue
         self,
+        name,
+        id,
         players,
-        queue: SixMansQueue,
+        playerDB,
+        points,
+        text_channel: discord.TextChannel,
+        teamSelection,
+        max_size,
         helper_role=None,
         automove=False,
-        text_channel: discord.TextChannel = None,
         voice_channels: List[discord.VoiceChannel] = [],
         info_message: discord.Message = None,
         use_reactions=True,
         observers=None,
-        prefix="?",
     ):
-        self.id = uuid.uuid4().int
-        self.players = set(players)
+        # TODO Make Voice channels when game is created
+        prefix = "?"
+        self.teamSelection = teamSelection
+        self.name = name
+        self.id = id
+        self.points = points
+        self.players = players
+        self.playerDB = set(playerDB)
         self.player_votes = {}
         self.captains = []
         self.blue = set()
         self.orange = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.queue = queue
         self.use_reactions = use_reactions
         self.scoreReported = False
-        self.teamSelection = queue.teamSelection
+        self.teamSelection = players.teamSelection
         self.state = Strings.TEAM_SELECTION_GS
-        self.prefix = prefix
         self.reaction_lock = False
+        self.text_channel, self.voice_channels = self.mkChannels(players)
+        self.category = text_channel.category
 
         # Optional params
         self.helper_role = helper_role
@@ -79,13 +90,24 @@ class Game:
 
     # Team Management
     async def create_game_channels(self, category=None):
+        """
+        Creates game channels for the current game session.
+
+        Parameters:
+        - category (CategoryChannel): The category channel where the game channels will be created.
+                                        If not provided, the category of the queue will be used.
+
+        Returns:
+        - None
+        """
+
         if not category:
-            category = self.queue.category
+            category = self.category
         guild = self.queue.guild
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
         self.textChannel = await guild.create_text_channel(
-            f"{code} {self.queue.name} {self.queue.maxSize} Mans",
+            f"{code} {self.name} {self.queue.maxSize} Mans",
             category=category,
         )
         await self.textChannel.set_permissions(
@@ -135,6 +157,18 @@ class Game:
         )
 
     def add_to_blue(self, player):
+        """
+        Adds a player to the blue team.
+
+        If the player is already in the orange team, they will be removed from the orange team.
+        If the player is already in the players list, they will be removed from the players list.
+
+        Args:
+            player: The player to be added to the blue team.
+
+        Returns:
+                None
+        """
         if player in self.orange:
             self.orange.remove(player)
         if player in self.players:
@@ -142,6 +176,18 @@ class Game:
         self.blue.add(player)
 
     def add_to_orange(self, player):
+        """
+        Adds a player to the orange team.
+
+        If the player is already in the blue team, they will be removed from the blue team.
+        If the player is already in the players list, they will be removed from the players list.
+
+        Args:
+            player: The player to be added to the orange team.
+
+        Returns:
+            None
+        """
         if player in self.blue:
             self.blue.remove(player)
         if player in self.players:
@@ -149,6 +195,18 @@ class Game:
         self.orange.add(player)
 
     async def update_player_perms(self):
+        """
+        Update the permissions of players in the voice channels based on their team (blue or orange).
+
+        This method sets the appropriate permissions for each player in the blue and orange teams
+        in the general voice channel, blue team voice channel, and orange team voice channel.
+        If the `automove` flag is set to True, it also attempts to move the players to their respective
+        team voice channels.
+
+        Note: This method assumes that the `voiceChannels` attribute is a tuple containing the
+        blue team voice channel, orange team voice channel, and general voice channel in that order.
+        """
+
         blue_vc, orange_vc, general_vc = self.voiceChannels
 
         for player in self.orange:
@@ -175,6 +233,12 @@ class Game:
 
     # Team Selection
     async def vote_team_selection(self, helper_role=None):
+        """
+        Sends a vote for team selection message and adds reactions to it.
+
+        Args:
+            helper_role (Optional[str]): The role of the helper. Defaults to None.
+        """
         # Mentions all players
         embed = self._get_vote_embed()
         self.info_message = await self.textChannel.send(embed=embed)
@@ -601,12 +665,12 @@ class Game:
         embed.set_thumbnail(url=self.queue.guild.icon.url)
         embed.add_field(
             name="Blue",
-            value="\n".join([player.mention for player in self.blue]) + '\n',
+            value="\n".join([player.mention for player in self.blue]) + "\n",
             inline=True,
         )
         embed.add_field(
             name="Orange",
-            value="\n".join([player.mention for player in self.orange]) + '\n',
+            value="\n".join([player.mention for player in self.orange]) + "\n",
             inline=True,
         )
 
@@ -660,12 +724,12 @@ class Game:
             )
         embed.add_field(
             name="Blue Team",
-            value=", ".join([player.mention for player in self.blue]) + '\n',
+            value=", ".join([player.mention for player in self.blue]) + "\n",
             inline=False,
         )
         embed.add_field(
             name="Orange Team",
-            value=", ".join([player.mention for player in self.orange]) + '\n',
+            value=", ".join([player.mention for player in self.orange]) + "\n",
             inline=False,
         )
         if not invalid:
@@ -697,7 +761,8 @@ class Game:
         help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if helper_role:
             help_message = (
-                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. " + help_message
+                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. "
+                + help_message
             )
         embed.add_field(name="Help", value=help_message, inline=False)
         embed.set_footer(text=f"Game ID: {self.id}")
@@ -731,12 +796,12 @@ class Game:
         embed.set_thumbnail(url=self.queue.guild.icon.url)
         embed.add_field(
             name="Blue",
-            value="\n".join([player.mention for player in self.blue]) + '\n',
+            value="\n".join([player.mention for player in self.blue]) + "\n",
             inline=True,
         )
         embed.add_field(
             name="Orange",
-            value="\n".join([player.mention for player in self.orange]) + '\n',
+            value="\n".join([player.mention for player in self.orange]) + "\n",
             inline=True,
         )
 
@@ -813,9 +878,7 @@ class Game:
                 discord.Colour.blue() if pick == "blue" else discord.Colour.orange()
             )
             player = self.captains[0] if pick == "blue" else self.captains[1]
-            description = (
-                f"**{player.name}**, react to pick a player to join the **{pick}** team."
-            )
+            description = f"**{player.name}**, react to pick a player to join the **{pick}** team."
 
         else:
             team_color = discord.Colour.green()
