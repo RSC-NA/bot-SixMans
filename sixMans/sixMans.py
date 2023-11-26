@@ -77,8 +77,8 @@ class SixMans(commands.Cog):
             self.player_timeout_time: dict[int] = {}
             self.queues_enabled: dict[bool] = {}
 
-        asyncio.create_task(self._pre_load_data())
-        self.timeout_tasks = {}
+            asyncio.create_task(self._pre_load_data())
+            self.timeout_tasks = {}
 
     def cog_unload(self):
         """Clean up when cog shuts down."""
