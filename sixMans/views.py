@@ -11,22 +11,6 @@ from typing import TYPE_CHECKING, List, Optional
 if TYPE_CHECKING:
     from sixMans.game import Game
 
-def confirmed():
-    return "Confirmed"
-
-def declined():
-    return "Declined"
-
-class ButtonPress(discord.ui.Button):
-    async def callback(self, interaction: discord.Interaction):
-        button_id = self.custom_id
-        return_msg: str
-        
-        if button_id == "confirmed":
-            return_msg = confirmed()
-        elif button_id == "declined":
-            return_msg = declined()
-
 
 class GameState(StrEnum):
     NEW = "New"
@@ -318,18 +302,21 @@ class AuthorOnlyView(discord.ui.View):
         return True
 
 
-class ConfirmButton(discord.ui.View):
-    def __init__(self, style = discord.ButtonStyle.green, disabled = False):
-        super().__init__(timeout = None)
-        confirmBn = ButtonPress(label = "Confirm", style = style, custom_id="confirmed", disabled=disabled)
-        self.add_item(confirmBn)
-       
+class ConfirmButton(discord.ui.Button):
+    def __init__(self, callback: Callable = None):
+        super().__init__()
+        self.label = "Confirm"
+        self.custom_id = "confirmed"
+        self.style = discord.ButtonStyle.green
+        if callback:
+            self.callback = callback
 
-#if we set up our buttons in this way we can use the same class for multipul buttons and deal with all of our button logic in one place
-class DeclineButton(discord.ui.View):
-    def __init__(self, style = discord.ButtonStyle.red, disabled = False):
-        super().__init__(timeout = None)
-        
-        declineBn = ButtonPress(label = "Decline", style = style, custom_id="declined", disabled=disabled)
-        self.add_item(declineBn)
-        
+
+class DeclineButton(discord.ui.Button):
+    def __init__(self, callback: Callable = None):
+        super().__init__()
+        self.label = "Decline"
+        self.custom_id = "declined"
+        self.style = discord.ButtonStyle.red
+        if callback:
+            self.callback = callback
