@@ -22,49 +22,83 @@ SELECTION_MODES = {
     0x0262F: Strings.BALANCED_TS,  # yin_yang
 }
 
-
+# JOB: choose team selection method
+# JOB: pick teams
+# JOB: report winner
+# JOB: cancel game
+# JOB: game type
 class Game:
     def __init__(
         # To be made from queue
         self,
-        queue: SixMansQueue,
+        name,
+        id,
+        teamSelection: GameMode,
+        players: List[discord.Member],
+        maxSize: int,
         helper_role: discord.Role = None,
         automove: bool = False,
         text_channel: discord.TextChannel = None,
         voice_channels: List[discord.VoiceChannel] = [],
-        info_message: discord.Message = None,
-        prefix: str = "?",
-        playerDB: List[Union[discord.Member, discord.User]] = [],
+        points = None,
     ):
         # TODO Make Voice channels when game is created
         prefix = "?"
+        self.name = name
+        self.maxSize = maxSize
+        self.text_channel = text_channel
+        self.category: discord.CategoryChannel = self.textChannel.category
+        self.guild: discord.Guild = self.textChannel.guild
         self.id = id
-        self.playerDB = set(playerDB)
         self.player_votes = {}
         self.captains = []
         self.blue = set()
         self.orange = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.queue = queue
+        self.players = players
         self.scoreReported = False
-        self.teamSelection: GameMode = queue.teamSelection
+        self.teamSelection: GameMode = teamSelection
         self.state: GameState = GameState.NEW
         self.prefix = prefix
         self.reaction_lock = False
+        self.voiceChannels = voice_channels
+        self.create_game_TC() # make the TC
         log.debug(f"Game created. ID: {self.id} Players: {self.players}")
 
         # Optional params
         self.helper_role = helper_role
         self.automove = automove
         self.textChannel = text_channel
-        self.voiceChannels = (
-            voice_channels  # List of voice channels: [Blue, Orange, General]
-        )
-        self.info_message = info_message
+        
 
     # Team Management
-    async def create_game_channels(self, category=None):
+    async def create_game_TC(self, category=None):
+            """
+            Creates text channels for the game.
+
+            Args:
+                category (discord.CategoryChannel, optional): The category channel where the channele will be created. If not provided, the default category will be used.
+
+            Returns:
+                None
+            """
+            if not category:
+                category = self.category
+            guild = self.guild
+            # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
+            code = str(self.id)[-3:]
+            self.textChannel = await guild.create_text_channel(
+                f"{code} {self.name} {self.maxSize} Mans",
+                category=category,
+            )
+            await self.textChannel.set_permissions(
+                guild.default_role, view_channel=False
+            )
+            for player in self.players:
+                await self.textChannel.set_permissions(player, view_channel=False)
+        
+    async def create_game_VCs(self, category=None):
         """
         Creates game channels for the current game session.
 
@@ -78,33 +112,24 @@ class Game:
 
         if not category:
             category = self.category
-        guild = self.queue.guild
+        guild = self.guild
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
-        self.textChannel = await guild.create_text_channel(
-            f"{code} {self.name} {self.queue.maxSize} Mans",
-            category=category,
-        )
-        await self.textChannel.set_permissions(
-            guild.default_role, view_channel=False, read_messages=False
-        )
-        for player in self.players:
-            await self.textChannel.set_permissions(player, read_messages=True)
 
         # create a general VC lobby for all players in a session
         general_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} General VC",
+            f"{code} | {self.name} General VC",
             category=category,
         )
         await general_vc.set_permissions(guild.default_role, connect=False)
-
+        self.voiceChannels.append(general_vc)
         blue_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} Blue Team",
+            f"{code} | {self.name} Blue Team",
             category=category,
         )
         await blue_vc.set_permissions(guild.default_role, connect=False)
         oran_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} Orange Team",
+            f"{code} | {self.name} Orange Team",
             category=category,
         )
         await oran_vc.set_permissions(guild.default_role, connect=False)
@@ -127,9 +152,7 @@ class Game:
         self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
         # Mentions all players
-        await self.textChannel.send(
-            ", ".join(player.mention for player in self.players)
-        )
+        await self.textChannel.send(f"{self.players}")
 
     def add_to_blue(self, player):
         """
