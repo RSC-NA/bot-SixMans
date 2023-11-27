@@ -10,8 +10,8 @@ from .game import Game
 import string
 import random
 import copy
-from sixMans.strings import Strings
-from sixMans.views import GameMode
+from .strings import Strings
+from .views import GameMode
 
 log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
@@ -26,28 +26,34 @@ SELECTION_MODES = {
 }
 
 
+# JOB: When queue is full, create a game object and return it
+# TODO: Logic of people joining. Could be implimented somewhere else. Need to investigate.
 class SixMansQueue:
     def __init__(
         self,
-        name,
         guild: discord.Guild,
         channels: List[discord.TextChannel],
         points,
-        players,
         gamesPlayed,
         maxSize,
         text_channel: discord.TextChannel,
+        helper_role: discord.Role = None,
+        automove: bool = False,
         teamSelection=GameMode.VOTE,
+        players: List[discord.Member] = [],
+        # Discord members have the same functionality as discord users, but with server specific information.
+        #Only difference is the members avatar is the server specific avatar, while the users avatar is the global avatar.
         lobby_vc: discord.VoiceChannel = None,
     ):
-        self.id = self.make_name()
+        self.name = self.make_name()
+        self.helper_role = helper_role
+        self.automove = automove
         self.points = points
         self.id = uuid.uuid4().int
-        self.players = []
+        self.players: List[discord.Member] = players
         self.guild = text_channel.guild
         self.text_channel: discord.TextChannel = text_channel
         self.points = points
-        self.playerDB = playerDB
         self.gamesPlayed = gamesPlayed
         self.maxSize = maxSize
         self.category = text_channel.category
@@ -175,16 +181,26 @@ class SixMansQueue:
         # self.activeJoinLog[player.id] = datetime.datetime.now()
         if self._queue_full():
             return Game(
-                self.name,
-                self.id,
-                self.players,
-                self.points,
-                self.playerDB,
-                self.gamesPlayed,
-                self.teamSelection,
+                name = self.name,
+                id = self.id,
+                teamSelection = self.teamSelection,
+                players = self.players,
+                MaxSize = self.maxSize,
+                helper_role = self.helper_role,
+                automove = self.automove,
+                text_channel = self.text_channel,
+                points = self.points,
             )
         else:
             return None
+
+    def __str__(self):
+        """
+        Returns a string representation of the Queue object.
+
+        The string contains the mentions of all the players in the queue, separated by commas.
+        """
+        return ", ".join(player.mention for player in self.players)
 
     def _get(self):
         """
@@ -211,7 +227,7 @@ class SixMansQueue:
             dict or None: The player summary if found in the database, None otherwise.
         """
         try:
-            return self.playerDB[str(player.id)]
+            return self.player[str(player.id)]
         except:
             return None
 
@@ -277,7 +293,6 @@ class SixMansQueue:
             await self.send_message(
                 f"Queue Team Selection has been set to **{team_selection}**."
             )
-
 
     def _get_pick_reaction(self, int_or_hex):
         """
