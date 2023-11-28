@@ -27,39 +27,35 @@ SELECTION_MODES = {
 
 
 # JOB: When queue is full, create a game object and return it
+# Reset the queue
 # TODO: Logic of people joining. Could be implimented somewhere else. Need to investigate.
 class SixMansQueue:
     def __init__(
         self,
-        guild: discord.Guild,
-        channels: List[discord.TextChannel],
-        points,
-        gamesPlayed,
-        maxSize,
         text_channel: discord.TextChannel,
+        maxSize=6,
         helper_role: discord.Role = None,
         automove: bool = False,
-        teamSelection=GameMode.VOTE,
-        players: List[discord.Member] = [],
         # Discord members have the same functionality as discord users, but with server specific information.
-        #Only difference is the members avatar is the server specific avatar, while the users avatar is the global avatar.
-        lobby_vc: discord.VoiceChannel = None,
+        # Only difference is the members avatar is the server specific avatar, while the users avatar is the global avatar.
     ):
+        #Will move to game
         self.name = self.make_name()
+        self.id = uuid.uuid4().int
+        self.teamSelection: GameMode = GameMode.VOTE
+        self.players: List[discord.Member] = []
+        self.maxSize = maxSize
         self.helper_role = helper_role
         self.automove = automove
-        self.points = points
-        self.id = uuid.uuid4().int
-        self.players: List[discord.Member] = players
-        self.guild = text_channel.guild
         self.text_channel: discord.TextChannel = text_channel
-        self.points = points
-        self.gamesPlayed = gamesPlayed
-        self.maxSize = maxSize
-        self.category = text_channel.category
-        self.teamSelection: GameMode = teamSelection
+        self.points = 0
 
-        self.lobby_vc = lobby_vc
+        #Wont bring to game
+        self.guild = text_channel.guild
+        self.gamesPlayed = 0
+        self.category = text_channel.category
+        
+
         self.activeJoinLog = {}
         # TODO: active join log could maintain queue during downtime
 
@@ -177,10 +173,11 @@ class SixMansQueue:
         Returns:
             Game or None: If the queue is full after adding the player, returns a new Game object. Otherwise, returns None.
         """
+        # we'll add a player then check if the queue is full. Will never add a player if the queue is full.
         self.players.append(player)
         # self.activeJoinLog[player.id] = datetime.datetime.now()
         if self._queue_full():
-            return Game(
+            game = Game(
                 name = self.name,
                 id = self.id,
                 teamSelection = self.teamSelection,
@@ -191,6 +188,8 @@ class SixMansQueue:
                 text_channel = self.text_channel,
                 points = self.points,
             )
+            self.players.clear()
+            return game
         else:
             return None
 
