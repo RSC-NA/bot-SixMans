@@ -1,4 +1,3 @@
-
 import datetime
 
 from sys import exc_info, maxsize
@@ -10,6 +9,7 @@ from redbot.core import commands
 
 from sixMans.sixMansSplit.functions import *
 from sixMansSplit.sixMansParent import SixMansParent
+
 
 class LeaderboardCommands(SixMansParent):
     # region leaderboard commands

@@ -10,6 +10,7 @@ from redbot.core import commands
 from sixMans.sixMansSplit.functions import *
 from sixMansSplit.sixMansParent import SixMansParent
 
+
 class RankCommands(SixMansParent):
     # region rank commands
 

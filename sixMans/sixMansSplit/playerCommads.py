@@ -16,8 +16,8 @@ from sixMans.queue import SixMansQueue
 from sixMans.strings import Strings
 from sixMans.views import GameMode, GameState
 
+
 class PlayerCommands(SixMansParent):
-    
     # region player commands
     @commands.guild_only()
     @commands.command(aliases=["smMove", "moveme"])

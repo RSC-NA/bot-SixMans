@@ -1,4 +1,3 @@
-
 from sys import exc_info, maxsize
 from typing import Dict, List
 
@@ -7,6 +6,7 @@ from redbot.core import commands
 
 from sixMans.sixMansSplit.functions import *
 from sixMansSplit.sixMansParent import SixMansParent
+
 
 class Listerners(SixMansParent):
     # region listeners

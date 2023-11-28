@@ -15,6 +15,7 @@ from sixMans.game import Game
 
 from sixMans.views import GameMode
 
+
 class GetSetCommands(SixMansParent):
     @commands.guild_only()
     @commands.command(aliases=["cq", "status"])

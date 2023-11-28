@@ -27,7 +27,9 @@ from sixMans.views import GameMode, GameState
 
 # the starting cog class
 # Contains all of the admin commands for the sixmans cog
-class SixMans(GetSetCommands, LeaderboardCommands, Listerners, PlayerCommands, RankCommands):  
+class SixMans(
+    GetSetCommands, LeaderboardCommands, Listerners, PlayerCommands, RankCommands
+):
     def cog_unload(self):
         """Clean up when cog shuts down."""
         for player, tasks in self.timeout_tasks.items():
@@ -605,9 +607,5 @@ class SixMans(GetSetCommands, LeaderboardCommands, Listerners, PlayerCommands, R
         await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
 
     # endregion
-    
+
     # endregion
-
-    
-
-   

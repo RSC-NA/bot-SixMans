@@ -39,7 +39,7 @@ class SixMansQueue:
         # Discord members have the same functionality as discord users, but with server specific information.
         # Only difference is the members avatar is the server specific avatar, while the users avatar is the global avatar.
     ):
-        #Will move to game
+        # Will move to game
         self.name = self.make_name()
         self.id = uuid.uuid4().int
         self.teamSelection: GameMode = GameMode.VOTE
@@ -50,11 +50,10 @@ class SixMansQueue:
         self.text_channel: discord.TextChannel = text_channel
         self.points = 0
 
-        #Wont bring to game
+        # Wont bring to game
         self.guild = text_channel.guild
         self.gamesPlayed = 0
         self.category = text_channel.category
-        
 
         self.activeJoinLog = {}
         # TODO: active join log could maintain queue during downtime
@@ -178,15 +177,15 @@ class SixMansQueue:
         # self.activeJoinLog[player.id] = datetime.datetime.now()
         if self._queue_full():
             game = Game(
-                name = self.name,
-                id = self.id,
-                teamSelection = self.teamSelection,
-                players = self.players,
-                MaxSize = self.maxSize,
-                helper_role = self.helper_role,
-                automove = self.automove,
-                text_channel = self.text_channel,
-                points = self.points,
+                name=self.name,
+                id=self.id,
+                teamSelection=self.teamSelection,
+                players=self.players,
+                MaxSize=self.maxSize,
+                helper_role=self.helper_role,
+                automove=self.automove,
+                text_channel=self.text_channel,
+                points=self.points,
             )
             self.players.clear()
             return game

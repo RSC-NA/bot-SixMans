@@ -74,8 +74,8 @@ class Game:
         self.textChannel = text_channel
 
     # region Team Management
-    
-    #makes game TC channel and VC after queue pops
+
+    # makes game TC channel and VC after queue pops
     async def create_game_channels(self, category=None):
         """
         Creates text channels for the game.
@@ -98,7 +98,7 @@ class Game:
         await self.textChannel.set_permissions(guild.default_role, view_channel=False)
         for player in self.players:
             await self.textChannel.set_permissions(player, view_channel=False)
-        
+
         # create a general VC lobby for all players in a session
         general_vc = await guild.create_voice_channel(
             f"{code} | {self.name} General VC",
@@ -107,7 +107,8 @@ class Game:
         await general_vc.set_permissions(guild.default_role, connect=False)
         self.voiceChannels.append(general_vc)
 
-    #made after teams are picked
+        # made after teams are picked
+
     async def create_game_VCs(self, category=None):
         """
         Creates game channels for the current game session.
@@ -152,11 +153,11 @@ class Game:
                 self.helper_role, connect=True, move_members=True
             )
 
-
         # Mentions all players
         await self.textChannel.send(f"{self.players}")
 
-    #made after votes are done
+        # made after votes are done
+
     def add_to_blue(self, player):
         """
         Adds a player to the blue team.
@@ -195,7 +196,6 @@ class Game:
             self.players.remove(player)
         self.orange.add(player)
 
-
     async def update_player_perms(self):
         """
         Update the permissions of players in the voice channels based on their team (blue or orange).
@@ -232,6 +232,7 @@ class Game:
                     await player.move_to(blue_vc)
                 except:
                     pass
+
     # endregion
 
     # region Team Selection
@@ -319,7 +320,7 @@ class Game:
         balanced_teams, balance_score = self.get_balanced_teams()
         self.balance_score = balance_score
         # Pick random balanced team
-        blur = random.choice(balanced_teams)
+        blue = random.choice(balanced_teams)
         orange = []
         for player in self.players:
             if player not in blue:
@@ -338,6 +339,7 @@ class Game:
     async def shuffle_players(self):
         await self.pick_random_teams()
         await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
+
     # endregion
 
     # region Team Selection helpers
@@ -670,6 +672,7 @@ class Game:
             react = self._get_pick_reaction(int(react_hex, base=16))
             players += f"{react} {player.mention}\n"
         return players
+
     # endregion
 
     # region Embeds & Emojis
@@ -1019,8 +1022,9 @@ class Game:
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
+
     # endregion
-    
+
     # region General Helper Commands
     def full_player_reset(self):
         self.reset_players()
@@ -1113,7 +1117,8 @@ class Game:
             game_dict["HelperRole"] = self.helper_role.id
 
         return game_dict
-    #endregion
-    
+
+    # endregion
+
     async def _guild_team_selection(self):
         return await self.config.guild(self.queue.guild).DefaultTeamSelection()
