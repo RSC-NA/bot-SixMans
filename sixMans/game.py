@@ -22,6 +22,7 @@ SELECTION_MODES = {
     0x0262F: Strings.BALANCED_TS,  # yin_yang
 }
 
+
 # JOB: choose team selection method
 # JOB: pick teams
 # JOB: report winner
@@ -39,8 +40,7 @@ class Game:
         helper_role: discord.Role = None,
         automove: bool = False,
         text_channel: discord.TextChannel = None,
-        voice_channels: List[discord.VoiceChannel] = [],
-        points = None,
+        points=None,
     ):
         # TODO Make Voice channels when game is created
         prefix = "?"
@@ -62,42 +62,52 @@ class Game:
         self.state: GameState = GameState.NEW
         self.prefix = prefix
         self.reaction_lock = False
-        self.voiceChannels = voice_channels
-        self.create_game_TC() # make the TC
+        self.general_vc: discord.VoiceChannel = None
+        self.oran_vc: discord.VoiceChannel = None
+        self.blue_vc: discord.VoiceChannel = None
+        self.create_game_TC()  # make the TC
         log.debug(f"Game created. ID: {self.id} Players: {self.players}")
 
         # Optional params
         self.helper_role = helper_role
         self.automove = automove
         self.textChannel = text_channel
+
+    # region Team Management
+    
+    #makes game TC channel and VC after queue pops
+    async def create_game_channels(self, category=None):
+        """
+        Creates text channels for the game.
+
+        Args:
+            category (discord.CategoryChannel, optional): The category channel where the channele will be created. If not provided, the default category will be used.
+
+        Returns:
+            None
+        """
+        if not category:
+            category = self.category
+        guild = self.guild
+        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
+        code = str(self.id)[-3:]
+        self.textChannel = await guild.create_text_channel(
+            f"{code} {self.name} {self.maxSize} Mans",
+            category=category,
+        )
+        await self.textChannel.set_permissions(guild.default_role, view_channel=False)
+        for player in self.players:
+            await self.textChannel.set_permissions(player, view_channel=False)
         
+        # create a general VC lobby for all players in a session
+        general_vc = await guild.create_voice_channel(
+            f"{code} | {self.name} General VC",
+            category=category,
+        )
+        await general_vc.set_permissions(guild.default_role, connect=False)
+        self.voiceChannels.append(general_vc)
 
-    # Team Management
-    async def create_game_TC(self, category=None):
-            """
-            Creates text channels for the game.
-
-            Args:
-                category (discord.CategoryChannel, optional): The category channel where the channele will be created. If not provided, the default category will be used.
-
-            Returns:
-                None
-            """
-            if not category:
-                category = self.category
-            guild = self.guild
-            # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
-            code = str(self.id)[-3:]
-            self.textChannel = await guild.create_text_channel(
-                f"{code} {self.name} {self.maxSize} Mans",
-                category=category,
-            )
-            await self.textChannel.set_permissions(
-                guild.default_role, view_channel=False
-            )
-            for player in self.players:
-                await self.textChannel.set_permissions(player, view_channel=False)
-        
+    #made after teams are picked
     async def create_game_VCs(self, category=None):
         """
         Creates game channels for the current game session.
@@ -116,13 +126,6 @@ class Game:
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
 
-        # create a general VC lobby for all players in a session
-        general_vc = await guild.create_voice_channel(
-            f"{code} | {self.name} General VC",
-            category=category,
-        )
-        await general_vc.set_permissions(guild.default_role, connect=False)
-        self.voiceChannels.append(general_vc)
         blue_vc = await guild.create_voice_channel(
             f"{code} | {self.name} Blue Team",
             category=category,
@@ -139,21 +142,21 @@ class Game:
             await self.textChannel.set_permissions(
                 self.helper_role, view_channel=True, read_messages=True
             )
-            await general_vc.set_permissions(
+            await self.general_vc.set_permissions(
                 self.helper_role, connect=True, move_members=True
             )
-            await blue_vc.set_permissions(
+            await self.blue_vc.set_permissions(
                 self.helper_role, connect=True, move_members=True
             )
-            await oran_vc.set_permissions(
+            await self.oran_vc.set_permissions(
                 self.helper_role, connect=True, move_members=True
             )
 
-        self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
         # Mentions all players
         await self.textChannel.send(f"{self.players}")
 
+    #made after votes are done
     def add_to_blue(self, player):
         """
         Adds a player to the blue team.
@@ -192,6 +195,7 @@ class Game:
             self.players.remove(player)
         self.orange.add(player)
 
+
     async def update_player_perms(self):
         """
         Update the permissions of players in the voice channels based on their team (blue or orange).
@@ -228,8 +232,9 @@ class Game:
                     await player.move_to(blue_vc)
                 except:
                     pass
+    # endregion
 
-    # Team Selection
+    # region Team Selection
     async def vote_team_selection(self):
         """Start a vote for game mode."""
         vote_view = GameModeVote(self)
@@ -333,8 +338,9 @@ class Game:
     async def shuffle_players(self):
         await self.pick_random_teams()
         await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
+    # endregion
 
-    # Team Selection helpers
+    # region Team Selection helpers
     async def process_team_selection_method(self, team_selection=None):
         if not team_selection:
             team_selection = self.teamSelection
@@ -664,8 +670,9 @@ class Game:
             react = self._get_pick_reaction(int(react_hex, base=16))
             players += f"{react} {player.mention}\n"
         return players
+    # endregion
 
-    # Embeds & Emojis
+    # region Embeds & Emojis
     async def update_game_info(self):
         embed = discord.Embed(
             title=f"{self.queue.name} {self.queue.maxSize} Mans Game Info",
@@ -1012,9 +1019,9 @@ class Game:
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
-
-    # General Helper Commands
-
+    # endregion
+    
+    # region General Helper Commands
     def full_player_reset(self):
         self.reset_players()
         self.blue = set()
@@ -1106,6 +1113,7 @@ class Game:
             game_dict["HelperRole"] = self.helper_role.id
 
         return game_dict
-
+    #endregion
+    
     async def _guild_team_selection(self):
         return await self.config.guild(self.queue.guild).DefaultTeamSelection()
