@@ -1585,6 +1585,8 @@ class SixMans(commands.Cog):
         _games_played = await self._games_played(guild)
         date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
+            if not isinstance(player, discord.Member) and not isinstance(player, discord.User):
+                continue
             score = self._create_player_score(
                 six_mans_queue, game, player, 1, date_time
             )
@@ -1592,6 +1594,8 @@ class SixMans(commands.Cog):
             self._give_points(_players, score)
             _scores.insert(0, score)
         for player in losing_players:
+            if not isinstance(player, discord.Member) and not isinstance(player, discord.User):
+                continue
             score = self._create_player_score(
                 six_mans_queue, game, player, 0, date_time
             )
