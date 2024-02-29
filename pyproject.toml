@@ -1,0 +1,24 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+asyncio_mode = "auto"
+python_files = [
+    "test_*.py"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:aiohttp_json_rpc",
+    "ignore::DeprecationWarning:aiohttp"
+]
+env_files = [
+    ".env"
+]
+
+[tool.mypy]
+check_untyped_defs = true
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 125
+extend-ignore = "E203,W503"
+per-file-ignores = "__init__.py:F401"
