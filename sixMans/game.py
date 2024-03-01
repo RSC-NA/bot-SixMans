@@ -1,17 +1,18 @@
+import asyncio
+import contextlib
+import logging
 import random
 import struct
-import logging
 import uuid
-import asyncio
-import operator
-import discord
 from itertools import combinations
+from pprint import pformat
 
-from sixMans.strings import Strings
+import discord
+
+from sixMans.enums import GameMode, GameState, Winner
 from sixMans.queue import SixMansQueue
-from sixMans.views import GameModeVote, GameMode, GameState, CaptainsView
-
-from typing import Union, List
+from sixMans.strings import Strings
+from sixMans.views import CaptainsView, GameModeVote, SelfPickingView
 
 log = logging.getLogger("red.RSC6Mans.sixMans.game")
 
@@ -26,25 +27,25 @@ SELECTION_MODES = {
 class Game:
     def __init__(
         self,
-        players: List[Union[discord.Member, discord.User]],
+        players: list[discord.Member],
         queue: SixMansQueue,
-        helper_role: discord.Role = None,
+        helper_role: discord.Role | None = None,
         automove: bool = False,
-        text_channel: discord.TextChannel = None,
-        voice_channels: List[discord.VoiceChannel] = [],
-        info_message: discord.Message = None,
+        text_channel: discord.TextChannel | None = None,
+        voice_channels: list[discord.VoiceChannel] | None = None,
+        info_message: discord.Message | None = None,
         prefix: str = "?",
     ):
         self.id = uuid.uuid4().int
         self.players = set(players)
-        self.player_votes = {}
-        self.captains = []
-        self.blue = set()
-        self.orange = set()
+        self.player_votes: dict[discord.Member, int] = {}
+        self.captains: list[discord.Member] = []
+        self.blue: set[discord.Member] = set()
+        self.orange: set[discord.Member] = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
         self.queue = queue
-        self.scoreReported = False
+        self.winner = Winner.PENDING
         self.teamSelection: GameMode = queue.teamSelection
         self.state: GameState = GameState.NEW
         self.prefix = prefix
@@ -75,7 +76,8 @@ class Game:
             guild.default_role, view_channel=False, read_messages=False
         )
         for player in self.players:
-            await self.textChannel.set_permissions(player, read_messages=True)
+            if isinstance(player, discord.Member):
+                await self.textChannel.set_permissions(player, read_messages=True)
 
         # create a general VC lobby for all players in a session
         general_vc = await guild.create_voice_channel(
@@ -113,9 +115,7 @@ class Game:
         self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
         # Mentions all players
-        await self.textChannel.send(
-            ", ".join(player.mention for player in self.players)
-        )
+        await self.textChannel.send(" ".join(player.mention for player in self.players))
 
     def add_to_blue(self, player):
         if player in self.orange:
@@ -142,8 +142,10 @@ class Game:
             if self.automove:
                 try:
                     await player.move_to(orange_vc)
-                except:
+                except (discord.Forbidden, discord.HTTPException):
                     pass
+                except TypeError as exc:
+                    log.warning("Bad type passed to `Member.move_to()`", exc_info=exc)
 
         for player in self.blue:
             await general_vc.set_permissions(player, connect=True)
@@ -153,8 +155,10 @@ class Game:
             if self.automove:
                 try:
                     await player.move_to(blue_vc)
-                except:
+                except (discord.Forbidden, discord.HTTPException):
                     pass
+                except TypeError as exc:
+                    log.warning("Bad type passed to `Member.move_to()`", exc_info=exc)
 
     # Team Selection
     async def vote_team_selection(self):
@@ -163,12 +167,17 @@ class Game:
         await vote_view.start()
         await vote_view.wait()
 
+        if not self.textChannel:
+            return
+
         if not vote_view.result:
             # Vote failed. We need to decide what to do here.
             await self.textChannel.send("Error during game mode vote... Please report.")
             return
 
+        self.state = GameState.SELECTION
         self.teamSelection = vote_view.result
+        log.debug(f"Game mode vote finished. Result: {self.teamSelection}")
 
         # Dispatch
         match self.teamSelection:
@@ -185,63 +194,63 @@ class Game:
 
     async def captains_pick_teams(self, helper_role=None):
         """Initiate Captains Game Mode"""
-        log.debug(f"self.players: {type(self.players)} {self.players}")
+        log.debug(
+            f"Game Players: {type(self.players)}\n{pformat([f'{p.id}: {p.name}' for p in self.players])}"
+        )
         captains_view = CaptainsView(self)
         await captains_view.start()
         await captains_view.wait()
-        # if not helper_role:
-        #     helper_role = self.helper_role
 
-        # # Pick captains
-        # log.debug(f"Picking captains from: {self.players}")
-        # self.captains = random.sample(list(self.players), 2)
-        # self.blue.add(self.captains[0])
-        # self.orange.add(self.captains[1])
-        # self.helper_role = helper_role
+        if not self.textChannel:
+            return
 
-        # pickable = list(self.players)
-        # pickable.remove(self.captains[0])
-        # pickable.remove(self.captains[1])
+        if not captains_view:
+            await self.textChannel.send(
+                "Error: Unable to finish captains team selection. Please reach out for support."
+            )
+            return
 
-        # # Assign reactions to remaining players
-        # self.react_player_picks = {}
-        # react_hex = 0x1F1E6
-        # for i in range(len(pickable)):
-        #     react_hex_i = hex(react_hex + i)
-        #     self.react_player_picks[react_hex_i] = pickable[i]
-
-        # # Get player pick embed
-        # embed = self._get_captains_embed("blue")
-        # self.info_message = await self.textChannel.send(embed=embed)
-
-        # await self._add_reactions(self.react_player_picks.keys(), self.info_message)
+        self.captains = captains_view.captains
+        self.blue = set(captains_view.blue)
+        self.orange = set(captains_view.orange)
+        self.state = GameState.ONGOING
+        await self.send_game_info()
 
     async def pick_random_teams(self):
         self.blue = set()
         self.orange = set()
         for player in random.sample(tuple(self.players), int(len(self.players) // 2)):
             self.add_to_orange(player)
-        blue = [player for player in self.players]
+        blue = list(self.players)
         for player in blue:
             self.add_to_blue(player)
         self.reset_players()
         self.get_new_captains_from_teams()
         await self.update_player_perms()
-        await self.update_game_info()
+        await self.send_game_info()
         self.state = GameState.ONGOING
 
     async def self_picking_teams(self):
-        embed = self._get_spt_embed()
-        self.info_message = await self.textChannel.send(embed=embed)
-        await self._add_reactions(
-            [Strings.ORANGE_REACT, Strings.BLUE_REACT], self.info_message
-        )
+        picking_view = SelfPickingView(game=self, helper=self.helper_role)
+        await picking_view.prompt()
+        await picking_view.wait()
+
+        if not picking_view.finished:
+            await self.textChannel.send(
+                content="Error during team selection. Please reach out for support."
+            )
+            return
+
+        self.orange = set(picking_view.orange)
+        self.blue = set(picking_view.blue)
+        self.state = GameState.ONGOING
+        await self.send_game_info()
 
     async def pick_balanced_teams(self):
         balanced_teams, balance_score = self.get_balanced_teams()
         self.balance_score = balance_score
         # Pick random balanced team
-        blur = random.choice(balanced_teams)
+        blue = random.choice(balanced_teams)
         orange = []
         for player in self.players:
             if player not in blue:
@@ -254,20 +263,29 @@ class Game:
         self.reset_players()
         self.get_new_captains_from_teams()
         await self.update_player_perms()
-        await self.update_game_info()
+        await self.send_game_info()
         self.state = GameState.ONGOING
 
     async def shuffle_players(self):
         await self.pick_random_teams()
+
+        if not self.info_message:
+            return
         await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
 
     # Team Selection helpers
     async def process_team_selection_method(self, team_selection=None):
         if not team_selection:
             team_selection = self.teamSelection
+
+        if self.state == GameState.ONGOING:
+            log.debug("Game has started already... skipping team selection processing")
+            return
+
         self.full_player_reset()
         team_selection = team_selection.lower()
         helper_role = self.helper_role
+
         match self.teamSelection:
             case GameMode.VOTE:
                 await self.vote_team_selection()
@@ -288,70 +306,15 @@ class Game:
                 # End game here potentially?
                 log.error(f"Error processing team selection mode: {self.teamSelection}")
 
-    async def process_captains_pick(self, emoji, user):
-        teams_complete = False
-        pick_i = len(self.blue) + len(self.orange) - 2
-        pick_order = ["blue", "orange", "orange", "blue"]
-        pick = pick_order[pick_i % len(pick_order)]
-        captain_picking = self.captains[0] if pick == "blue" else self.captains[1]
-
-        if user != captain_picking:
-            self.info_message = await self.textChannel.fetch_message(
-                self.info_message.id
-            )
-            for this_react in self.info_message.reactions:
-                this_react: discord.Reaction
-                reacted_members = [user async for users in this_react.users()]
-                if user in reacted_members:
-                    try:
-                        await this_react.remove(user)
-                    except:
-                        pass
-            return False
-
-        # get player from reaction
-        player_picked = self._get_player_from_reaction_emoji(ord(emoji))
-        await self.info_message.clear_reaction(emoji)
-
-        # add to correct team, update teams embed
-        self.blue.add(player_picked) if pick == "blue" else self.orange.add(
-            player_picked
-        )
-
-        # automatically process last pick
-        picks_remaining = list(self.react_player_picks.keys())
-        if len(picks_remaining) > 1:
-            embed = self._get_captains_embed(pick_order[pick_i + 1])
-            await self.info_message.edit(embed=embed)
-
-        elif len(picks_remaining) == 1:
-            last_pick = "blue" if len(self.orange) > len(self.blue) else "orange"
-            last_pick_key = picks_remaining[0]
-            last_player = self.react_player_picks[last_pick_key]
-            del self.react_player_picks[last_pick_key]
-            await self.info_message.clear_reactions()
-            self.blue.add(last_player) if last_pick == "blue" else self.orange.add(
-                last_player
-            )
-            teams_complete = True
-            embed = self._get_captains_embed(None, guild=last_player.guild)
-            await self.info_message.edit(embed=embed)
-
-        if teams_complete:
-            for player in self.blue:
-                self.add_to_blue(player)
-            for player in self.orange:
-                self.add_to_orange(player)
-            self.reset_players()
-            await self.update_player_perms()
-            await self.update_game_info()
-            self.state = GameState.ONGOING
-
-        return teams_complete
-
     async def process_self_picking_teams(self, emoji, user, added=True):
+        if not self.textChannel:
+            return
+
+        if not self.info_message:
+            return
+
         self.info_message = await self.textChannel.fetch_message(self.info_message.id)
-        if self.state != GameState.New:
+        if self.state != GameState.NEW:
             return False
 
         if user not in set(list(self.blue) + list(self.orange) + list(self.players)):
@@ -361,11 +324,12 @@ class Game:
                         self.info_message.id
                     )
                     for reaction in self.info_message.reactions:
-                        reacted_members = await reaction.users().flatten()
+                        reacted_members = [gen async for gen in reaction.users()]
                         if reaction.emoji == emoji and user in reacted_members:
                             await reaction.remove(user)
                             break
-            except TypeError:
+            except TypeError as exc:
+                log.exception("Type error in self picking teams", exc_info=exc)
                 pass
             return
 
@@ -375,36 +339,44 @@ class Game:
                     self.add_to_orange(user)
                 # Remove opposite color reaction
                 for react in self.info_message.reactions:
-                    if ord(react.emoji) == Strings.BLUE_REACT:
-                        reacted_members = await react.users().flatten()
+                    emoji = react.emoji
+
+                    if ord(emoji) == Strings.BLUE_REACT:
+                        reacted_members = [gen async for gen in reaction.users()]
                         if user in reacted_members:
-                            try:
+                            with contextlib.suppress(
+                                discord.HTTPException,
+                                discord.Forbidden,
+                                discord.NotFound,
+                            ):
                                 await react.remove(user)
-                            except:
-                                pass
+
             elif ord(emoji) == Strings.BLUE_REACT:
                 if len(self.blue) < self.queue.maxSize // 2:
                     self.add_to_blue(user)
+
                 # Remove opposite color reaction
                 for react in self.info_message.reactions:
-                    if ord(react.emoji) == Strings.ORANGE_REACT:
-                        reacted_members = await react.users().flatten()
+                    emoji = react.emoji
+
+                    if ord(emoji) == Strings.ORANGE_REACT:
+                        reacted_members = [gen async for gen in reaction.users()]
                         if user in reacted_members:
-                            try:
+                            with contextlib.suppress(
+                                discord.HTTPException,
+                                discord.Forbidden,
+                                discord.NotFound,
+                            ):
                                 await react.remove(user)
-                            except:
-                                pass
             else:
                 return
         else:
-            if ord(emoji) == Strings.ORANGE_REACT:
-                if user in self.orange:
-                    self.orange.remove(user)
-                    self.players.add(user)
-            elif ord(emoji) == Strings.BLUE_REACT:
-                if user in self.blue:
-                    self.blue.remove(user)
-                    self.players.add(user)
+            if (ord(emoji) == Strings.ORANGE_REACT) and (user in self.orange):
+                self.orange.remove(user)
+                self.players.add(user)
+            elif (ord(emoji) == Strings.BLUE_REACT) and (user in self.blue):
+                self.blue.remove(user)
+                self.players.add(user)
 
         embed = self._get_spt_embed()
         await self.info_message.edit(embed=embed)
@@ -422,7 +394,7 @@ class Game:
             self.reset_players()
             self.get_new_captains_from_teams()
             await self.update_player_perms()
-            await self.update_game_info()
+            await self.send_game_info()
             self.state = GameState.ONGOING
 
     async def _remove_stale_reactions(self, emoji_hex: int, member: discord.Member):
@@ -432,6 +404,9 @@ class Game:
         It utilizes an lock to prevent multiple instances of this function from running at the same time.
         """
         if self.reaction_lock:
+            return
+
+        if not self.info_message:
             return
 
         self.reaction_lock = True
@@ -448,20 +423,27 @@ class Game:
         self.reaction_lock = False
 
     async def process_team_select_vote(self, emoji, member, added=True):
+        if not self.info_message:
+            return
+
         if member not in self.players:
             asyncio.create_task(self.info_message.remove_reaction(emoji, member))
             return
+
         emoji_hex = self._hex_i_from_emoji(emoji)
         if emoji_hex not in SELECTION_MODES:
             return
+
         if added:
             await self._remove_stale_reactions(emoji_hex, member)
             self.player_votes[member] = emoji_hex
         elif self.player_votes[member] == emoji_hex:
             self.player_votes.pop(member)
+
         # ensure we still need to take action
         if self.reaction_lock or self.teamSelection.lower() != Strings.VOTE_TS.lower():
             return
+
         votes = {react_hex_i: 0 for react_hex_i in SELECTION_MODES}
         for vote in self.player_votes.values():
             votes[vote] += 1
@@ -495,7 +477,7 @@ class Game:
 
         # Calc perfectly balanced team based on scores
         score_total = 0
-        for player, p_data in player_scores.items():
+        for p_data in player_scores.values():
             score_total += p_data["Score"]
         avg_team_score = score_total / 2
 
@@ -553,7 +535,7 @@ class Game:
 
         # Score Players, Avg
         score_total = 0
-        for player, p_data in scores.items():
+        for p_data in scores.values():
             p_rank = (
                 p_data["Rank"] if ("Rank" in p_data and p_data["Rank"]) else rank_avg
             )
@@ -568,21 +550,20 @@ class Game:
 
         return scores
 
-    async def report_winner(self, winner):
+    async def report_winner(self, winner: Winner):
         self.winner = winner
         await self.color_embed_for_winners(winner)
-        self.scoreReported = True
         self.state = GameState.COMPLETE
 
     def _get_pick_reaction(self, int_or_hex):
         try:
-            if type(int_or_hex) == int:
+            if isinstance(int_or_hex, int):
                 return struct.pack("<I", int_or_hex).decode("utf-32le")
-            if type(int_or_hex) == str:
+            if isinstance(int_or_hex, str):
                 return struct.pack("<I", int(int_or_hex, base=16)).decode(
                     "utf-32le"
                 )  # i == react_hex
-        except:
+        except (TypeError, ValueError):
             return None
 
     def _get_pickable_players_str(self):
@@ -593,7 +574,7 @@ class Game:
         return players
 
     # Embeds & Emojis
-    async def update_game_info(self):
+    async def send_game_info(self):
         embed = discord.Embed(
             title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
             color=discord.Colour.green(),
@@ -643,28 +624,33 @@ class Game:
     async def post_more_lobby_info(self, helper_role=None, invalid=False):
         if not helper_role:
             helper_role = self.helper_role
+
         sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
+
         embed_color = discord.Colour.green()
         if invalid:
             sm_title += " :x: [Teams Changed]"
             embed_color = discord.Colour.red()
+
         embed = discord.Embed(title=sm_title, color=embed_color)
-        embed.set_thumbnail(url=self.queue.guild.icon.url)
+
+        if self.queue.guild.icon:
+            embed.set_thumbnail(url=self.queue.guild.icon.url)
 
         if self.queue.teamSelection == Strings.VOTE_TS:
             ts_emoji = self._get_ts_emoji()
-            team_selection = self.teamSelection
-            if team_selection == Strings.BALANCED_TS:
-                try:
-                    team_selection += "\n\nBalance Score: {}".format(self.balance_score)
-                    team_selection += "\n_Lower Balance Scores = More Balanced_"
-                except:
-                    pass
+            team_selection = self.teamSelection.value
+
+            if team_selection == Strings.BALANCED_TS and self.balance_score:
+                team_selection += f"\n\nBalance Score: {self.balance_score}"
+                team_selection += "\n_Lower Balance Scores = More Balanced_"
+
             embed.add_field(
                 name="Team Selection",
                 value="{} {}".format(ts_emoji, team_selection),
                 inline=False,
             )
+
         embed.add_field(
             name="Blue Team",
             value="{}\n".format(", ".join([player.mention for player in self.blue])),
@@ -702,13 +688,18 @@ class Game:
             embed.add_field(
                 name="Additional Info",
                 value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+                "When you are done playing with the current teams please report the winning team "
+                "using the command `{0}sr [winning_team]` where the `winning_team` parameter is either "
+                "`Blue` or `Orange`. Both teams will need to verify the results.\n\n"
+                "If you wish to cancel the game and allow players to queue again you can use the `{0}cg` command."
+                " Both teams will need to verify that they wish to "
                 "cancel the game.".format(self.prefix),
                 inline=False,
             )
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
+        help_message = (
+            "If you think the bot isn't working correctly or have suggestions to improve it"
+            ", please contact the RSC Development Committee."
+        )
         if helper_role:
             help_message = (
                 "If you need any help or have questions please contact someone with the {0} role. ".format(
@@ -768,66 +759,19 @@ class Game:
     def _hex_i_from_emoji(self, emoji):
         return ord(emoji)
 
-    async def color_embed_for_winners(self, winner):
+    async def color_embed_for_winners(self, winner: Winner):
         if self.info_message is not None:
-            winner = winner.lower()
-            if winner == "blue":
-                color = discord.Colour.blue()
-            elif winner == "orange":
-                color = discord.Colour.orange()
-            else:
-                color = discord.Colour.green()  # catch all for errors hopefully
+            match winner:
+                case Winner.BLUE:
+                    color = discord.Colour.blue()
+                case Winner.ORANGE:
+                    color = discord.Colour.orange()
+                case Winner.PENDING:
+                    color = discord.Colour.yellow()
 
             embed = self.info_message.embeds[0]
-            embed_dict = embed.to_dict()
-            embed_dict["color"] = color.value
-            embed = discord.Embed.from_dict(embed_dict)
+            embed.colour = color
             await self.info_message.edit(embed=embed)
-
-    def _get_vote_embed(self, vote: dict = {}, winning_vote=None):
-        # Count Votes, prep embed fields
-        vote_options = []
-        votes_casted = []
-        total_votes = 0
-        for react_hex, mode in SELECTION_MODES.items():
-            react_emoji = self._get_pick_reaction(react_hex)
-            vote_options.append("{} {}".format(react_emoji, mode))
-            num_votes = vote.setdefault(react_hex, 0)
-            votes_casted.append(str(num_votes))
-            total_votes += num_votes
-
-        pending = len(self.players) - total_votes
-        description = "Please vote for your preferred team selection method!"
-        embed = discord.Embed(
-            title="{} Game | Team Selection Vote".format(
-                self.textChannel.name.replace("-", " ").title()[4:]
-            ),
-            color=self._get_completion_color(total_votes, pending),
-            description=description,
-        )
-        # embed.set_thumbnail(url=self.queue.guild.icon.url)
-
-        embed.add_field(name="Options", value="\n".join(vote_options), inline=True)
-        embed.add_field(name="Votes", value="\n".join(votes_casted), inline=True)
-
-        if winning_vote:
-            voted = "{} {}".format(
-                self._get_pick_reaction(winning_vote), SELECTION_MODES[winning_vote]
-            )
-            embed.add_field(name="Vote Complete!", value=voted, inline=False)
-
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
-        if self.helper_role:
-            help_message = (
-                "If you need any help or have questions please contact someone with the {0} role. ".format(
-                    self.helper_role.mention
-                )
-                + help_message
-            )
-        embed.add_field(name="Help", value=help_message, inline=False)
-
-        embed.set_footer(text="Game ID: {}".format(self.id))
-        return embed
 
     def _get_captains_embed(self, pick, guild=None):
         # Determine who picks next
@@ -898,73 +842,6 @@ class Game:
 
         return embed
 
-    def _get_spt_embed(self):
-        placed = len(self.blue) + len(self.orange)
-        embed = discord.Embed(
-            title="{} Game | Team Selection".format(
-                self.textChannel.name.replace("-", " ").title()[4:]
-            ),
-            description="React :orange_circle: with or :blue_circle: to pick your team!",
-            color=discord.Color.blue(),
-        )
-        embed.set_thumbnail(url=self.queue.guild.icon.url)
-
-        # List teams as they stand
-        no_players_str = "[No Players]"
-        blue_players = (
-            ", ".join(p.mention for p in self.blue) if self.blue else no_players_str
-        )
-        orange_players = (
-            ", ".join(p.mention for p in self.orange) if self.orange else no_players_str
-        )
-        unplaced_players = (
-            ", ".join(p.mention for p in self.players)
-            if self.players
-            else no_players_str
-        )
-
-        ts_emoji = self._get_ts_emoji()
-        embed.add_field(
-            name="Team Selection",
-            value="{} {}".format(ts_emoji, self.teamSelection),
-            inline=False,
-        )
-        embed.add_field(name="Blue Team", value=blue_players, inline=False)
-        embed.add_field(name="Orange Team", value=orange_players, inline=False)
-        embed.add_field(name="Unplaced Players", value=unplaced_players, inline=False)
-
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
-        if self.helper_role:
-            help_message = (
-                "If you need any help or have questions please contact someone with the {0} role. ".format(
-                    self.helper_role.mention
-                )
-                + help_message
-            )
-        embed.add_field(name="Help", value=help_message, inline=False)
-
-        embed.set_footer(text="Game ID: {}".format(self.id))
-        return embed
-
-    def _get_player_from_reaction_emoji(self, emoji):
-        target_key = None
-        target_value = None
-        for e, player in self.react_player_picks.items():
-            if emoji == int(
-                e, base=16
-            ):  # or ord(emoji) == ord(e) or str(emoji) == str(e):
-                target_key = e
-                target_value = player
-                break
-        if target_key:
-            del self.react_player_picks[target_key]
-        return target_value
-
-    def _get_ts_emoji(self):
-        for key, value in SELECTION_MODES.items():
-            if value == self.teamSelection:
-                return self._get_pick_reaction(key)
-
     # General Helper Commands
 
     def full_player_reset(self):
@@ -986,10 +863,10 @@ class Game:
 
     async def _add_reactions(self, react_hex_codes, message):
         for react_hex_i in react_hex_codes:
-            if type(react_hex_i) == int:
+            if isinstance(react_hex_i, int):
                 react = struct.pack("<I", react_hex_i).decode("utf-32le")
                 await message.add_reaction(react)
-            elif type(react_hex_i) == str:
+            elif isinstance(react_hex_i, str):
                 react = struct.pack("<I", int(react_hex_i, base=16)).decode("utf-32le")
                 await message.add_reaction(react)
 
@@ -1031,10 +908,9 @@ class Game:
         return item in self.players or item in self.orange or item in self.blue
 
     def _to_dict(self):
-        try:
+        vc_channels = []
+        if self.voiceChannels:
             vc_channels = [x.id for x in self.voiceChannels]
-        except:
-            vc_channels = None
 
         game_dict = {
             "Players": [x.id for x in self.players],
@@ -1045,10 +921,10 @@ class Game:
             "RoomPass": self.roomPass,
             "VoiceChannels": vc_channels,
             "QueueId": self.queue.id,
-            "ScoreReported": self.scoreReported,
             "TeamSelection": self.teamSelection,
             "State": self.state,
             "Prefix": self.prefix,
+            "Winner": self.winner,
         }
         if self.info_message:
             game_dict["InfoMessage"] = self.info_message.id

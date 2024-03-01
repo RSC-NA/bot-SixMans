@@ -1,16 +1,19 @@
 import collections
+import contextlib
 import datetime
 import logging
-import uuid
 import struct
+import uuid
 from queue import Queue
 from typing import List
+
+import discord
+
 from sixMans.strings import Strings
 from sixMans.views import GameMode
 
 log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
-import discord
 
 SELECTION_MODES = {
     0x1F3B2: Strings.RANDOM_TS,  # game_die
@@ -32,8 +35,8 @@ class SixMansQueue:
         gamesPlayed,
         maxSize,
         teamSelection=GameMode.VOTE,
-        category: discord.CategoryChannel = None,
-        lobby_vc: discord.VoiceChannel = None,
+        category: discord.CategoryChannel | None = None,
+        lobby_vc: discord.VoiceChannel | None = None,
     ):
         self.id = uuid.uuid4().int
         self.name = name
@@ -47,7 +50,7 @@ class SixMansQueue:
         self.teamSelection: GameMode = teamSelection
         self.category = category
         self.lobby_vc = lobby_vc
-        self.activeJoinLog = {}
+        self.activeJoinLog: dict[int, datetime.datetime] = {}
         # TODO: active join log could maintain queue during downtime
 
     def _put(self, player):
@@ -56,24 +59,20 @@ class SixMansQueue:
 
     def _get(self):
         player = self.queue.get()
-        try:
+        with contextlib.suppress(KeyError):
             del self.activeJoinLog[player.id]
-        except:
-            pass
         return player
 
     def get_player_summary(self, player: discord.User):
         try:
             return self.players[str(player.id)]
-        except:
+        except KeyError:
             return None
 
     def _remove(self, player):
         self.queue._remove(player)
-        try:
+        with contextlib.suppress(KeyError):
             del self.activeJoinLog[player.id]
-        except:
-            pass
 
     def _queue_full(self):
         return self.queue.qsize() >= self.maxSize
@@ -95,13 +94,13 @@ class SixMansQueue:
 
     def _get_pick_reaction(self, int_or_hex):
         try:
-            if type(int_or_hex) == int:
+            if isinstance(int_or_hex, int):
                 return struct.pack("<I", int_or_hex).decode("utf-32le")
-            if type(int_or_hex) == str:
+            if isinstance(int_or_hex, str):
                 return struct.pack("<I", int(int_or_hex, base=16)).decode(
                     "utf-32le"
                 )  # i == react_hex
-        except:
+        except (ValueError, TypeError):
             return None
 
     def _to_dict(self):
