@@ -2309,58 +2309,58 @@ class SixMans(commands.Cog):
         queue_max_size,
         rank_format,
     ):
-        # try:
-        num_players = len(sorted_players)
-        points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
-        player_info = sorted_players[points_index][1]
-        points, wins, games_played = (
-            player_info[Strings.PLAYER_POINTS_KEY],
-            player_info[Strings.PLAYER_WINS_KEY],
-            player_info[Strings.PLAYER_GP_KEY],
-        )
-        wins_index = [
-            y[0]
-            for y in sorted(
-                sorted_players,
-                key=lambda x: x[1][Strings.PLAYER_WINS_KEY],
-                reverse=True,
+        try:
+            num_players = len(sorted_players)
+            points_index = [y[0] for y in sorted_players].index(f"{player.id}")
+            player_info = sorted_players[points_index][1]
+            points, wins, games_played = (
+                player_info[Strings.PLAYER_POINTS_KEY],
+                player_info[Strings.PLAYER_WINS_KEY],
+                player_info[Strings.PLAYER_GP_KEY],
             )
-        ].index("{0}".format(player.id))
-        games_played_index = [
-            y[0]
-            for y in sorted(
-                sorted_players,
-                key=lambda x: x[1][Strings.PLAYER_GP_KEY],
-                reverse=True,
+            wins_index = [
+                y[0]
+                for y in sorted(
+                    sorted_players,
+                    key=lambda x: x[1][Strings.PLAYER_WINS_KEY],
+                    reverse=True,
+                )
+            ].index("{0}".format(player.id))
+            games_played_index = [
+                y[0]
+                for y in sorted(
+                    sorted_players,
+                    key=lambda x: x[1][Strings.PLAYER_GP_KEY],
+                    reverse=True,
+                )
+            ].index("{0}".format(player.id))
+            embed = discord.Embed(
+                title=f"{player.display_name} {queue_name} {queue_max_size} Mans {rank_format} Rank",
+                color=discord.Colour.blue(),
             )
-        ].index("{0}".format(player.id))
-        embed = discord.Embed(
-            title=f"{player.display_name} {queue_name} {queue_max_size} Mans {rank_format} Rank",
-            color=discord.Colour.blue(),
-        )
-        embed.set_thumbnail(url=player.display_avatar.url)
-        embed.add_field(
-            name="Points:",
-            value=f"**Value:** {points} | **Rank:** {points_index+1}/{num_players}",
-            inline=True,
-        )
-        embed.add_field(
-            name="Wins:",
-            value=f"**Value:** {wins} | **Rank:** {wins_index + 1}/{num_players}",
-            inline=True,
-        )
-        embed.add_field(
-            name="Games Played:",
-            value=f"**Value:** {games_played} | **Rank:** {games_played_index + 1}/{num_players}",
-            inline=True,
-        )
-        # except:
-        #     embed = discord.Embed(
-        #         title=f"{player.display_name} {queue_name} {queue_max_size} Mans {rank_format} Rank",
-        #         description=f"No stats yet to rank {player.mention}",
-        #         color=discord.Colour.red(),
-        #     )
-        #     embed.set_thumbnail(url=player.display_avatar.url)
+            embed.set_thumbnail(url=player.display_avatar.url)
+            embed.add_field(
+                name="Points:",
+                value=f"**Value:** {points} | **Rank:** {points_index+1}/{num_players}",
+                inline=True,
+            )
+            embed.add_field(
+                name="Wins:",
+                value=f"**Value:** {wins} | **Rank:** {wins_index + 1}/{num_players}",
+                inline=True,
+            )
+            embed.add_field(
+                name="Games Played:",
+                value=f"**Value:** {games_played} | **Rank:** {games_played_index + 1}/{num_players}",
+                inline=True,
+            )
+        except ValueError:
+            embed = discord.Embed(
+                title=f"{player.display_name} {queue_name} {queue_max_size} Mans {rank_format} Rank",
+                description=f"No stats yet to rank {player.mention}",
+                color=discord.Colour.red(),
+            )
+            embed.set_thumbnail(url=player.display_avatar.url)
         return embed
 
     def format_player_list(self, queue: SixMansQueue):
