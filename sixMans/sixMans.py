@@ -123,6 +123,7 @@ class SixMans(commands.Cog):
         """Reloads all data for the 6mans cog"""
         await self._load_guild_data()
         await self._load_queues()
+        await self._load_games()
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -541,25 +542,15 @@ class SixMans(commands.Cog):
     # team selection
     @commands.guild_only()
     @commands.command(aliases=["fts"])
-    async def forceTeamSelection(self, ctx, *, args):
+    async def forceTeamSelection(self, ctx, mode: GameMode, game_id: int | None = None):
         """Forces a popped queue to restart a specified team selection.
 
         Format: `[p]fts <team_selection> [game_id]`"""
         if not await self.has_perms(ctx.author):
             return
 
-        if len(args) == 1:
-            game_id = None
-            team_selection = args
-        elif len(args) > 1:
-            args = args.split()
-            try:
-                game_id = int(args[-1])
-                team_selection = " ".join(args[0:-1])
-            except (TypeError, ValueError):
-                game_id = None
-                team_selection = " ".join(args)
-
+        log.debug(f"Game Mode: {mode}")
+        log.debug(f"Game ID: {game_id}")
         game: Game | None = None
         if game_id:
             for active_game in self.games[ctx.guild]:
@@ -569,18 +560,10 @@ class SixMans(commands.Cog):
             game = self._get_game_by_text_channel(ctx.channel)
 
         if not game:
-            await ctx.send(":x: Game not found.")
-            return
+            return await ctx.send(":x: Error: Game not found.")
 
-        valid_ts = self.is_valid_ts(team_selection)
-        if not valid_ts:
-            return await ctx.send(
-                f":x: **{team_selection}** is not a valid team selection method."
-            )
-
-        await game.textChannel.send(f"Processing Forced Team Selection: {valid_ts}")
-        game.teamSelection = valid_ts
-        await game.process_team_selection_method(team_selection=valid_ts)
+        await game.textChannel.send(f"Processing Forced Team Selection: {mode}")
+        await game.process_team_selection_method(team_selection=mode, force=True)
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])

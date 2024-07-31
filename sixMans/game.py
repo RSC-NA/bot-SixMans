@@ -276,15 +276,18 @@ class Game:
 
     # Team Selection helpers
     async def process_team_selection_method(
-        self, team_selection: GameMode | None = None
+        self, team_selection: GameMode | None = None, force: bool = False
     ):
-        if not team_selection:
-            team_selection = self.teamSelection
+        log.debug(f"Processing team selection. Current State: {self.state}")
 
-        if self.state == GameState.ONGOING:
+        if self.state == GameState.ONGOING and not force:
             log.debug("Game has started already... skipping team selection processing")
             return
 
+        if team_selection:
+            self.teamSelection = team_selection
+
+        self.state = GameState.SELECTION
         self.full_player_reset()
 
         match self.teamSelection:
@@ -426,6 +429,9 @@ class Game:
             value=f"```{self.roomName} // {self.roomPass}```",
             inline=False,
         )
+
+        creator = list(self.blue)[0].mention
+        embed.add_field(name="Lobby Creator", value=creator, inline=False)
 
         # Additional Info
         embed.add_field(
