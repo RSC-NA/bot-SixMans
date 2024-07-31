@@ -1,30 +1,18 @@
 import logging
 import random
-import struct
 from pprint import pformat
 from typing import TYPE_CHECKING, Callable
 
 import discord
 
 from sixMans.enums import GameMode, Winner
+from sixMans.utils import get_emoji
 
-log = logging.getLogger("red.RSC6Mans.sixMans.views")
+log = logging.getLogger("red.sixMans.views")
 
 
 if TYPE_CHECKING:
     from sixMans.game import Game
-
-
-def get_emoji(value):
-    try:
-        if isinstance(value, int):
-            return struct.pack("<I", value).decode("utf-32le")
-        if isinstance(value, str):
-            return struct.pack("<I", int(value, base=16)).decode(
-                "utf-32le"
-            )  # i == react_hex
-    except (ValueError, TypeError):
-        return None
 
 
 class AuthorOnlyView(discord.ui.View):
@@ -74,6 +62,7 @@ class GameModeVote(discord.ui.View):
             description="Please vote for your preferred game mode!",
             color=discord.Color.blue(),
         )
+        self.embed.set_footer(text=f"Game ID: {self.game.id}")
 
         self.embed.add_field(
             name="Game Mode", value="\n".join(self.options), inline=True
@@ -104,21 +93,25 @@ class GameModeVote(discord.ui.View):
             )
 
         # Create Buttons
-        for mode in self.votes.keys():
+        for mode in self.votes:
             log.debug(f"Adding game mode button: {mode}")
             button: discord.ui.Button = discord.ui.Button(
                 label=mode.value,
                 custom_id=mode.value,
                 style=discord.ButtonStyle.primary,
             )
-            button.callback = self.process_vote
+            button.callback = self.process_vote  # type: ignore
             self.add_item(button)
         self.msg = await self.channel.send(embed=self.embed, view=self)
 
     async def process_vote(self, interaction: discord.Interaction):
         """Process a game mode vote from button press"""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.defer()
+            return
+
         log.debug(f"Interaction Data Type: {type(interaction.data)}")
-        mode = GameMode(interaction.data["custom_id"])
+        mode = GameMode(interaction.data["custom_id"])  # type: ignore
         log.debug(f"{interaction.user} vote: {mode}")
         # Check if user has already voted.
         # if interaction.user in self.picked:
@@ -156,7 +149,7 @@ class GameModeVote(discord.ui.View):
 
     @property
     def vote_finished(self) -> bool:
-        top_mode = max(self.votes, key=self.votes.get)
+        top_mode = max(self.votes, key=self.votes.get)  # type: ignore
         if len(self.picked) == self.size or self.votes[top_mode] > (self.size / 2):
             self.result = top_mode
             return True
@@ -211,7 +204,7 @@ class CaptainsView(discord.ui.View):
                 custom_id=str(p.id),
                 style=discord.ButtonStyle.primary,
             )
-            button.callback = self.process_pick
+            button.callback = self.process_pick  # type: ignore
             self.add_item(button)
 
         self.msg = await self.channel.send(embed=self.embed, view=self)
@@ -225,6 +218,10 @@ class CaptainsView(discord.ui.View):
 
     async def process_pick(self, interaction: discord.Interaction, **kwargs):
         """Process a game mode vote from button press"""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.defer()
+            return
+
         log.debug(f"Kwargs: {pformat(kwargs)}")
         log.debug(f"Interaction Data Type: {type(interaction.data)}")
 
@@ -236,7 +233,7 @@ class CaptainsView(discord.ui.View):
         #     )
         #     return
 
-        pick_id = int(interaction.data["custom_id"])
+        pick_id = int(interaction.data["custom_id"])  # type: ignore
         pick = await self.find_player_by_id(pick_id)
         if not pick:
             await interaction.response.send_message(
@@ -524,7 +521,7 @@ class ScoreReportView(discord.ui.View):
         if Winner.PENDING in votes:
             return False
 
-        # Number of occurances should match length of value array
+        # Number of occurrences should match length of value array
         if votes.count(votes[0]) == len(self.answers):
             return True
 
@@ -683,7 +680,7 @@ class ConfirmButton(discord.ui.Button):
         self.custom_id = "confirmed"
         self.style = discord.ButtonStyle.green
         if callback:
-            self.callback = callback
+            self.callback = callback  # type: ignore
 
 
 class DeclineButton(discord.ui.Button):
@@ -693,7 +690,7 @@ class DeclineButton(discord.ui.Button):
         self.custom_id = "declined"
         self.style = discord.ButtonStyle.red
         if callback:
-            self.callback = callback
+            self.callback = callback  # type: ignore
 
 
 class SelfPickingView(discord.ui.View):
