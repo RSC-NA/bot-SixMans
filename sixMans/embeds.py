@@ -162,9 +162,9 @@ class SuccessEmbed(GreenEmbed):
 class ErrorEmbed(RedEmbed):
     """Generic Error Embed"""
 
-    def __init__(self, description: str, **kwargs):
+    def __init__(self, **kwargs):
         title = kwargs.pop("title", "Error")
-        super().__init__(title=title, description=description, **kwargs)
+        super().__init__(title=title, **kwargs)
 
 
 class WarningEmbed(OrangeEmbed):
@@ -187,6 +187,13 @@ class CooldownEmbed(YellowEmbed):
         super().__init__(title=title, description=desc, **kwargs)
 
 
+class QueueNotFoundEmbed(ErrorEmbed):
+    def __init__(self, name: str, **kwargs):
+        title = kwargs.pop("title", "Error")
+        desc = f"No queue found with name: **{name}**"
+        super().__init__(title=title, description=desc, **kwargs)
+
+
 class ExceptionErrorEmbed(RedEmbed):
     """Generic Error Embed"""
 
@@ -200,5 +207,5 @@ class NotImplementedEmbed(RedEmbed):
         super().__init__(
             title="Not Implemented",
             description="Command has not been implemented yet.",
-            **kwargs
+            **kwargs,
         )

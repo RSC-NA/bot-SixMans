@@ -8,6 +8,7 @@ Scripts/
 pyvenv.cfg
 Tracker*.json
 *.swp
+.*_cache/
 
 # Custom
 pyprojectback.toml

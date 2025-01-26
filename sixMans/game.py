@@ -11,7 +11,9 @@ from sixMans.embeds import GreenEmbed
 from sixMans.enums import GameMode, GameState, Winner
 from sixMans.queue import SixMansQueue
 from sixMans.strings import Strings
-from sixMans.views import CaptainsView, GameModeVote, SelfPickingView
+from sixMans.views.captains import CaptainsView
+from sixMans.views.selfpick import SelfPickingView
+from sixMans.views.vote import GameModeVote
 
 log = logging.getLogger("red.sixMans.game")
 
@@ -395,6 +397,7 @@ class Game:
 
     # Embeds & Emojis
     async def send_game_info(self):
+        log.debug(f"Game Mode: {self.teamSelection}")
         ts_emoji = utils.get_emoji(SELECTION_MODES.get(self.teamSelection.value))
 
         embed = GreenEmbed(

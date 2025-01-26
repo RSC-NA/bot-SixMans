@@ -1,6 +1,12 @@
 from enum import StrEnum
 
 
+class CancelVote(StrEnum):
+    CANCEL = "Cancel"
+    PLAY = "Play"
+    WAITING = "*Waiting*"
+
+
 class Winner(StrEnum):
     ORANGE = "orange"
     BLUE = "blue"

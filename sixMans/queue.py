@@ -1,16 +1,16 @@
 import contextlib
 import datetime
 import logging
-import struct
 import uuid
 from queue import Queue
 from typing import List
 
 import discord
 
+from sixMans.embeds import SuccessEmbed
+from sixMans.enums import GameMode
 from sixMans.strings import Strings
 from sixMans.types import OrderedSet
-from sixMans.views import GameMode
 
 log = logging.getLogger("red.sixMans.queue")
 
@@ -54,29 +54,11 @@ class SixMansQueue:
         self.activeJoinLog: dict[int, datetime.datetime] = {}
         # TODO: active join log could maintain queue during downtime
 
-    def _put(self, player):
-        self.queue.put(player)
-        # self.activeJoinLog[player.id] = datetime.datetime.now()
-
-    def _get(self):
-        player = self.queue.get()
-        with contextlib.suppress(KeyError):
-            del self.activeJoinLog[player.id]
-        return player
-
     def get_player_summary(self, player: discord.Member):
         try:
             return self.players[str(player.id)]
         except KeyError:
             return None
-
-    def _remove(self, player):
-        self.queue._remove(player)
-        with contextlib.suppress(KeyError):
-            del self.activeJoinLog[player.id]
-
-    def _queue_full(self):
-        return self.queue.qsize() >= self.maxSize
 
     async def send_message(self, message="", embed=None):
         messages = []
@@ -86,23 +68,31 @@ class SixMansQueue:
 
     async def set_team_selection(self, team_selection):
         self.teamSelection = GameMode(team_selection)
-        ts_embed = discord.Embed(
-            title="Success",
-            description=f"Queue default mode has been set to **{team_selection}**",
-            color=discord.Color.blue(),
-        )
-        await self.send_message(embed=ts_embed)
 
-    def _get_pick_reaction(self, int_or_hex):
-        try:
-            if isinstance(int_or_hex, int):
-                return struct.pack("<I", int_or_hex).decode("utf-32le")
-            if isinstance(int_or_hex, str):
-                return struct.pack("<I", int(int_or_hex, base=16)).decode(
-                    "utf-32le"
-                )  # i == react_hex
-        except (ValueError, TypeError):
-            return None
+    def queue_full(self):
+        return self.queue.qsize() >= self.maxSize
+
+    def clear(self):
+        while not self.queue.empty():
+            log.debug("Queue not empty.")
+            self.queue._get()
+        log.debug("Done clearing queue.")
+
+    # Internal
+
+    def _put(self, player):
+        self.queue.put(player)
+
+    def _get(self):
+        player = self.queue.get()
+        with contextlib.suppress(KeyError):
+            del self.activeJoinLog[player.id]
+        return player
+
+    def _remove(self, player):
+        self.queue._remove(player)
+        with contextlib.suppress(KeyError):
+            del self.activeJoinLog[player.id]
 
     def _to_dict(self):
         q_data = {
@@ -123,7 +113,7 @@ class SixMansQueue:
 
 
 class PlayerQueue(Queue):
-    def _init(self, maxsize):
+    def _init(self, maxsize: int):
         self.queue = OrderedSet()
 
     def _put(self, item):
