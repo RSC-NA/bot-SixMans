@@ -83,13 +83,13 @@ class GameModeVote(discord.ui.View):
         mode = GameMode(interaction.data["custom_id"])  # type: ignore
         log.debug(f"{interaction.user} vote: {mode}")
         # Check if user has already voted.
-        # if interaction.user in self.picked:
-        #     log.debug(f"{interaction.user} has already voted.")
-        #     await interaction.response.send_message(
-        #         content="You've already voted.",
-        #         ephemeral=True,
-        #     )
-        #     return
+        if interaction.user in self.picked:
+            log.debug(f"{interaction.user} has already voted.")
+            await interaction.response.send_message(
+                content="You've already voted.",
+                ephemeral=True,
+            )
+            return
         self.picked.append(interaction.user)
 
         self.votes[mode] += 1

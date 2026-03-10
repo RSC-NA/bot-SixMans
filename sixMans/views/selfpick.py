@@ -151,7 +151,7 @@ class SelfPickingView(discord.ui.View):
 
         if len(self.orange) >= self.team_size:
             await interaction.response.send_message(
-                "Blue team is already full.", ephemeral=True
+                "Orange team is already full.", ephemeral=True
             )
             return
 
