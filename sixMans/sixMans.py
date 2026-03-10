@@ -388,12 +388,11 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qban"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def queueBan(self, ctx: Context, player: discord.Member, duration_minutes: int, *, reason: str = None):
         """Ban a player from queueing for a specified number of minutes.
 
         Format: `[p]queueBan <player> <minutes> [reason]`"""
-        if not await self.has_perms(ctx.author):
-            return
 
         if duration_minutes <= 0:
             return await ctx.send(":x: Duration must be a positive number of minutes.")
@@ -429,12 +428,11 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qunban"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def queueUnban(self, ctx: Context, player: discord.Member):
         """Remove a queue ban from a player.
 
         Format: `[p]queueUnban <player>`"""
-        if not await self.has_perms(ctx.author):
-            return
 
         bans = await self.config.guild(ctx.guild).QueueBans()
         player_id = str(player.id)
@@ -447,10 +445,9 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qbans"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def listQueueBans(self, ctx: Context):
         """List all active queue bans."""
-        if not await self.has_perms(ctx.author):
-            return
 
         bans = await self.config.guild(ctx.guild).QueueBans()
         now = datetime.datetime.now(datetime.timezone.utc).timestamp()

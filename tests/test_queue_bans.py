@@ -92,7 +92,6 @@ def cog(guild):
     cog.queues = {guild: []}
     cog.games = {guild: []}
     cog.queues_enabled = {guild: True}
-    cog.has_perms = AsyncMock(return_value=True)
     cog._remove_from_queue = AsyncMock()
     cog._add_to_queue = AsyncMock()
 
@@ -324,19 +323,6 @@ class TestQueueBanCommand:
         assert ":x:" in msg
         assert "positive" in msg
 
-    @pytest.mark.asyncio
-    async def test_ban_no_perms_does_nothing(self, cog, guild):
-        """Command should do nothing if user lacks perms."""
-        cog.has_perms = AsyncMock(return_value=False)
-        player = make_member(100, guild)
-        admin = make_member(999, guild)
-        ctx = make_ctx(guild, admin)
-
-        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
-
-        ctx.send.assert_not_called()
-
-
 class TestQueueUnbanCommand:
     """Test the queueUnban command behavior."""
 
@@ -416,12 +402,3 @@ class TestListQueueBansCommand:
         msg = ctx.send.call_args[0][0]
         assert "No active queue bans" in msg
 
-    @pytest.mark.asyncio
-    async def test_has_perms_required(self, cog, guild):
-        """Commands should check has_perms before executing."""
-        cog.has_perms = AsyncMock(return_value=False)
-        ctx = make_ctx(guild, make_member(100, guild))
-
-        await cog.listQueueBans.callback(cog, ctx)
-
-        ctx.send.assert_not_called()
