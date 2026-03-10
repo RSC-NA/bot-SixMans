@@ -1,10 +1,13 @@
 import datetime
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import discord
 
+from sixMans.sixMans import SixMans
+
 
 # Helpers to build mock objects
+
 
 def make_guild(guild_id=1):
     guild = MagicMock(spec=discord.Guild)
@@ -20,7 +23,6 @@ def make_member(member_id=100, guild=None, display_name="TestPlayer"):
     member.mention = f"<@{member_id}>"
     member.guild = guild
     member.send = AsyncMock()
-    # For __contains__ checks in queue
     member.__eq__ = lambda self, other: isinstance(other, MagicMock) and self.id == other.id
     member.__hash__ = lambda self: hash(self.id)
     return member
@@ -63,22 +65,46 @@ def make_ctx(guild, author, channel=None):
     return ctx
 
 
-def make_cog(guild, queues=None, bans_dict=None):
-    """Create a minimal mock of the SixMans cog with the fields we need."""
-    cog = MagicMock()
-    cog.queues = {guild: queues or []}
-    cog.queues_enabled = {guild: True}
-    cog.has_perms = AsyncMock(return_value=True)
-    cog._remove_from_queue = AsyncMock()
+@pytest.fixture
+def guild():
+    return make_guild()
 
-    # Config mock
+
+@pytest.fixture
+def cog(guild):
+    """Instantiate a real SixMans cog with mocked bot and config."""
+    bot = MagicMock()
+    with patch("sixMans.sixMans.Config.get_conf") as mock_conf, \
+         patch("sixMans.sixMans.asyncio.create_task"):
+        # Set up config mock
+        mock_conf.return_value.register_guild = MagicMock()
+
+        cog = SixMans(bot)
+
+    # Override config with our controllable mock
     guild_config = MagicMock()
-    queue_bans = make_config_bans(bans_dict or {})
+    queue_bans = make_config_bans({})
     guild_config.QueueBans = queue_bans
     cog.config = MagicMock()
     cog.config.guild = MagicMock(return_value=guild_config)
 
+    # Set up guild state
+    cog.queues = {guild: []}
+    cog.games = {guild: []}
+    cog.queues_enabled = {guild: True}
+    cog.has_perms = AsyncMock(return_value=True)
+    cog._remove_from_queue = AsyncMock()
+    cog._add_to_queue = AsyncMock()
+
     return cog
+
+
+def set_bans(cog, guild, bans_dict):
+    """Helper to configure the ban state on a cog."""
+    queue_bans = make_config_bans(bans_dict)
+    guild_config = MagicMock()
+    guild_config.QueueBans = queue_bans
+    cog.config.guild = MagicMock(return_value=guild_config)
 
 
 # ─── Ban check logic tests ───
@@ -88,124 +114,108 @@ class TestBanCheckInQueue:
     """Test the ban-check logic that runs inside the queue command."""
 
     @pytest.mark.asyncio
-    async def test_active_ban_blocks_queue(self):
+    async def test_active_ban_blocks_queue(self, cog, guild):
         """A player with an active ban should be blocked from queueing."""
-        guild = make_guild()
         player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
 
-        bans = {
+        set_bans(cog, guild, {
             str(player.id): {
                 "expires": future_ts,
                 "reason": "toxicity",
                 "banned_by": 999,
             }
-        }
+        })
 
-        # Simulate the ban check logic from the queue command
-        player_id = str(player.id)
-        assert player_id in bans
-        assert bans[player_id]["expires"] > datetime.datetime.now(datetime.timezone.utc).timestamp()
+        ctx = make_ctx(guild, player)
+        q = make_queue_empty()
+        q.textChannel = ctx.channel
+        cog.queues[guild] = [q]
+        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+
+        await cog.queue.callback(cog, ctx)
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert ":x: You are banned from queueing" in msg
+        assert "toxicity" in msg
 
     @pytest.mark.asyncio
-    async def test_expired_ban_allows_queue(self):
-        """A player whose ban has expired should be allowed to queue."""
-        guild = make_guild()
+    async def test_expired_ban_allows_queue(self, cog, guild):
+        """A player whose ban has expired should have it cleaned up."""
         player = make_member(100, guild)
         past_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() - 3600
 
-        bans = {
+        bans_dict = {
             str(player.id): {
                 "expires": past_ts,
                 "reason": "left match",
                 "banned_by": 999,
             }
         }
+        set_bans(cog, guild, bans_dict)
 
-        player_id = str(player.id)
-        assert player_id in bans
-        assert bans[player_id]["expires"] <= datetime.datetime.now(datetime.timezone.utc).timestamp()
-        # The code would delete the ban here
-        del bans[player_id]
-        assert player_id not in bans
+        ctx = make_ctx(guild, player)
+        q = make_queue_empty()
+        q.textChannel = ctx.channel
+        q.queue.queue = []
+        q._queue_full = MagicMock(return_value=False)
+        cog.queues[guild] = [q]
+        cog.games[guild] = []
+        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+
+        await cog.queue.callback(cog, ctx)
+
+        # Expired ban should have been deleted from the dict
+        assert str(player.id) not in bans_dict
+        # The set should have been called to persist the cleanup
+        cog.config.guild(guild).QueueBans.set.assert_called()
 
     @pytest.mark.asyncio
-    async def test_no_ban_allows_queue(self):
-        """A player with no ban entry should be allowed to queue."""
-        bans = {}
-        player_id = "100"
-        assert player_id not in bans
-
-    @pytest.mark.asyncio
-    async def test_ban_message_includes_reason(self):
+    async def test_ban_message_includes_reason(self, cog, guild):
         """The ban message should include the reason when one is provided."""
+        player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
-        ban = {"expires": future_ts, "reason": "toxicity", "banned_by": 999}
 
-        expires = int(ban["expires"])
-        reason = ban.get("reason")
-        msg = f":x: You are banned from queueing until <t:{expires}:F> (<t:{expires}:R>)."
-        if reason:
-            msg += f"\nReason: {reason}"
-
-        assert "toxicity" in msg
-        assert f"<t:{expires}:F>" in msg
-
-    @pytest.mark.asyncio
-    async def test_ban_message_no_reason(self):
-        """The ban message should not include a reason line when none is provided."""
-        future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
-        ban = {"expires": future_ts, "reason": None, "banned_by": 999}
-
-        expires = int(ban["expires"])
-        reason = ban.get("reason")
-        msg = f":x: You are banned from queueing until <t:{expires}:F> (<t:{expires}:R>)."
-        if reason:
-            msg += f"\nReason: {reason}"
-
-        assert "Reason:" not in msg
-
-
-# ─── Ban storage tests ───
-
-
-class TestBanStorage:
-    """Test storing and retrieving ban data."""
-
-    @pytest.mark.asyncio
-    async def test_store_ban(self):
-        """Storing a ban should persist the correct data."""
-        guild = make_guild()
-        cog = make_cog(guild)
-
-        player_id = "100"
-        expires = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
-        ban_data = {"expires": expires, "reason": "test", "banned_by": 999}
-
-        bans = await cog.config.guild(guild).QueueBans()
-        bans[player_id] = ban_data
-        await cog.config.guild(guild).QueueBans.set(bans)
-
-        cog.config.guild(guild).QueueBans.set.assert_called_once_with({player_id: ban_data})
-
-    @pytest.mark.asyncio
-    async def test_remove_ban(self):
-        """Removing a ban should delete the player's entry."""
-        guild = make_guild()
-        player_id = "100"
-        bans_dict = {
-            player_id: {
-                "expires": datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600,
-                "reason": "test",
+        set_bans(cog, guild, {
+            str(player.id): {
+                "expires": future_ts,
+                "reason": "toxicity",
                 "banned_by": 999,
             }
-        }
-        cog = make_cog(guild, bans_dict=bans_dict)
+        })
 
-        bans = await cog.config.guild(guild).QueueBans()
-        assert player_id in bans
-        del bans[player_id]
-        assert player_id not in bans
+        ctx = make_ctx(guild, player)
+        q = make_queue_empty()
+        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+
+        await cog.queue.callback(cog, ctx)
+
+        msg = ctx.send.call_args[0][0]
+        assert "toxicity" in msg
+
+    @pytest.mark.asyncio
+    async def test_ban_message_no_reason(self, cog, guild):
+        """The ban message should not include a reason line when none is provided."""
+        player = make_member(100, guild)
+        future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
+
+        set_bans(cog, guild, {
+            str(player.id): {
+                "expires": future_ts,
+                "reason": None,
+                "banned_by": 999,
+            }
+        })
+
+        ctx = make_ctx(guild, player)
+        q = make_queue_empty()
+        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+
+        await cog.queue.callback(cog, ctx)
+
+        msg = ctx.send.call_args[0][0]
+        assert "Reason:" not in msg
 
 
 # ─── Command behavior tests ───
@@ -215,109 +225,203 @@ class TestQueueBanCommand:
     """Test the queueBan command behavior."""
 
     @pytest.mark.asyncio
-    async def test_ban_kicks_from_all_queues(self):
+    async def test_ban_kicks_from_all_queues(self, cog, guild):
         """Banning a player should kick them from all queues they're in."""
-        guild = make_guild()
         player = make_member(100, guild)
+        admin = make_member(999, guild)
         q1 = make_queue_with_player(player)
         q2 = make_queue_with_player(player)
         q3 = make_queue_empty()
+        cog.queues[guild] = [q1, q2, q3]
 
-        cog = make_cog(guild, queues=[q1, q2, q3])
+        ctx = make_ctx(guild, admin)
 
-        # Simulate the kick-from-all-queues logic
-        for six_mans_queue in cog.queues[guild]:
-            if player in six_mans_queue.queue:
-                await cog._remove_from_queue(player, six_mans_queue)
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
 
         assert cog._remove_from_queue.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_ban_computes_correct_expiry(self):
+    async def test_ban_stores_correct_expiry(self, cog, guild):
         """The expiry timestamp should be now + duration_minutes * 60."""
-        duration_minutes = 30
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
         before = datetime.datetime.now(datetime.timezone.utc).timestamp()
-        expires = datetime.datetime.now(datetime.timezone.utc).timestamp() + (duration_minutes * 60)
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
         after = datetime.datetime.now(datetime.timezone.utc).timestamp()
 
+        set_call = cog.config.guild(guild).QueueBans.set
+        set_call.assert_called_once()
+        stored_bans = set_call.call_args[0][0]
+        expires = stored_bans[str(player.id)]["expires"]
         assert before + 1800 <= expires <= after + 1800
 
     @pytest.mark.asyncio
-    async def test_ban_dm_failure_is_silent(self):
-        """If DM fails, the command should still succeed."""
-        player = make_member(100)
-        player.send = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Cannot send"))
+    async def test_ban_stores_reason(self, cog, guild):
+        """The ban should store the provided reason."""
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
 
-        # Simulate DM attempt with try/except
-        try:
-            await player.send("You have been banned.")
-        except Exception:
-            pass
-        # No assertion needed — just verifying no exception propagates
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="toxic behavior")
+
+        stored_bans = cog.config.guild(guild).QueueBans.set.call_args[0][0]
+        assert stored_bans[str(player.id)]["reason"] == "toxic behavior"
+
+    @pytest.mark.asyncio
+    async def test_ban_sends_confirmation(self, cog, guild):
+        """The command should send a confirmation message."""
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert ":white_check_mark:" in msg
+        assert player.mention in msg
+
+    @pytest.mark.asyncio
+    async def test_ban_dm_failure_is_silent(self, cog, guild):
+        """If DM fails with HTTPException, the command should still succeed."""
+        player = make_member(100, guild)
+        player.send = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Cannot send"))
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
+
+        # Command should still have sent the confirmation
+        ctx.send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_ban_zero_duration_rejected(self, cog, guild):
+        """Duration of 0 should be rejected."""
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueBan.callback(cog, ctx, player, 0, reason="test")
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert ":x:" in msg
+        assert "positive" in msg
+
+    @pytest.mark.asyncio
+    async def test_ban_negative_duration_rejected(self, cog, guild):
+        """Negative duration should be rejected."""
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueBan.callback(cog, ctx, player, -5, reason="test")
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert ":x:" in msg
+        assert "positive" in msg
+
+    @pytest.mark.asyncio
+    async def test_ban_no_perms_does_nothing(self, cog, guild):
+        """Command should do nothing if user lacks perms."""
+        cog.has_perms = AsyncMock(return_value=False)
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
+
+        ctx.send.assert_not_called()
 
 
 class TestQueueUnbanCommand:
     """Test the queueUnban command behavior."""
 
     @pytest.mark.asyncio
-    async def test_unban_removes_entry(self):
-        """Unbanning should remove the player's ban entry."""
-        player_id = "100"
-        bans = {
-            player_id: {
+    async def test_unban_removes_entry(self, cog, guild):
+        """Unbanning should remove the player's ban entry and send confirmation."""
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        bans_dict = {
+            str(player.id): {
                 "expires": datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600,
                 "reason": "test",
                 "banned_by": 999,
             }
         }
+        set_bans(cog, guild, bans_dict)
+        ctx = make_ctx(guild, admin)
 
-        assert player_id in bans
-        del bans[player_id]
-        assert player_id not in bans
+        await cog.queueUnban.callback(cog, ctx, player)
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert ":white_check_mark:" in msg
+        assert player.mention in msg
+        # Ban should have been persisted without the player
+        stored = cog.config.guild(guild).QueueBans.set.call_args[0][0]
+        assert str(player.id) not in stored
 
     @pytest.mark.asyncio
-    async def test_unban_nonexistent_player(self):
+    async def test_unban_nonexistent_player(self, cog, guild):
         """Unbanning a player who isn't banned should report that."""
-        bans = {}
-        player_id = "100"
-        assert player_id not in bans
+        player = make_member(100, guild)
+        admin = make_member(999, guild)
+        ctx = make_ctx(guild, admin)
+
+        await cog.queueUnban.callback(cog, ctx, player)
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert "not currently banned" in msg
 
 
 class TestListQueueBansCommand:
     """Test the listQueueBans command behavior."""
 
     @pytest.mark.asyncio
-    async def test_expired_bans_cleaned(self):
+    async def test_expired_bans_cleaned(self, cog, guild):
         """Expired bans should be cleaned up when listing."""
         now = datetime.datetime.now(datetime.timezone.utc).timestamp()
-        bans = {
+        bans_dict = {
             "100": {"expires": now - 3600, "reason": "expired", "banned_by": 999},
             "200": {"expires": now + 3600, "reason": "active", "banned_by": 999},
             "300": {"expires": now - 1, "reason": "just expired", "banned_by": 999},
         }
+        set_bans(cog, guild, bans_dict)
 
-        expired = [pid for pid, ban in bans.items() if ban["expires"] <= now]
-        for pid in expired:
-            del bans[pid]
+        member_200 = make_member(200, guild, "ActivePlayer")
+        guild.get_member = MagicMock(return_value=member_200)
 
-        assert "100" not in bans
-        assert "300" not in bans
-        assert "200" in bans
-        assert len(bans) == 1
+        ctx = make_ctx(guild, make_member(999, guild))
 
-    @pytest.mark.asyncio
-    async def test_no_active_bans(self):
-        """When no bans exist, the list should be empty."""
-        bans = {}
-        assert not bans
+        await cog.listQueueBans.callback(cog, ctx)
+
+        # Expired bans should have been removed
+        assert "100" not in bans_dict
+        assert "300" not in bans_dict
+        assert "200" in bans_dict
 
     @pytest.mark.asyncio
-    async def test_has_perms_required(self):
+    async def test_no_active_bans(self, cog, guild):
+        """When no bans exist, should report no active bans."""
+        ctx = make_ctx(guild, make_member(999, guild))
+
+        await cog.listQueueBans.callback(cog, ctx)
+
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
+        assert "No active queue bans" in msg
+
+    @pytest.mark.asyncio
+    async def test_has_perms_required(self, cog, guild):
         """Commands should check has_perms before executing."""
-        guild = make_guild()
-        cog = make_cog(guild)
         cog.has_perms = AsyncMock(return_value=False)
+        ctx = make_ctx(guild, make_member(100, guild))
 
-        # Simulate the perms check
-        result = await cog.has_perms(make_member(100))
-        assert result is False
+        await cog.listQueueBans.callback(cog, ctx)
+
+        ctx.send.assert_not_called()

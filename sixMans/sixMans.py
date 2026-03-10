@@ -395,6 +395,9 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
+        if duration_minutes <= 0:
+            return await ctx.send(":x: Duration must be a positive number of minutes.")
+
         expires = datetime.datetime.now(datetime.timezone.utc).timestamp() + (duration_minutes * 60)
         bans = await self.config.guild(ctx.guild).QueueBans()
         bans[str(player.id)] = {
@@ -421,7 +424,7 @@ class SixMans(commands.Cog):
             if reason:
                 dm_msg += f"\nReason: {reason}"
             await player.send(dm_msg)
-        except Exception:
+        except discord.HTTPException:
             pass
 
     @commands.guild_only()
