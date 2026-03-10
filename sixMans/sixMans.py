@@ -50,6 +50,7 @@ defaults = {
     "Players": {},
     "Scores": [],
     "QueuesEnabled": True,
+    "QueueBans": {},
 }
 
 
@@ -386,6 +387,95 @@ class SixMans(commands.Cog):
             await ctx.send(f"{player.display_name} is not in queue.")
 
     @commands.guild_only()
+    @commands.command(aliases=["qban"])
+    async def queueBan(self, ctx: Context, player: discord.Member, duration_minutes: int, *, reason: str = None):
+        """Ban a player from queueing for a specified number of minutes.
+
+        Format: `[p]queueBan <player> <minutes> [reason]`"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        expires = datetime.datetime.now(datetime.timezone.utc).timestamp() + (duration_minutes * 60)
+        bans = await self.config.guild(ctx.guild).QueueBans()
+        bans[str(player.id)] = {
+            "expires": expires,
+            "reason": reason,
+            "banned_by": ctx.author.id,
+        }
+        await self.config.guild(ctx.guild).QueueBans.set(bans)
+
+        # Kick from all queues in guild
+        for six_mans_queue in self.queues[ctx.guild]:
+            if player in six_mans_queue.queue:
+                await self._remove_from_queue(player, six_mans_queue)
+
+        expires_int = int(expires)
+        msg = f":white_check_mark: {player.mention} has been banned from queueing until <t:{expires_int}:F> (<t:{expires_int}:R>)."
+        if reason:
+            msg += f"\nReason: {reason}"
+        await ctx.send(msg)
+
+        # DM the player
+        try:
+            dm_msg = f"You have been banned from queueing in **{ctx.guild.name}** until <t:{expires_int}:F> (<t:{expires_int}:R>)."
+            if reason:
+                dm_msg += f"\nReason: {reason}"
+            await player.send(dm_msg)
+        except Exception:
+            pass
+
+    @commands.guild_only()
+    @commands.command(aliases=["qunban"])
+    async def queueUnban(self, ctx: Context, player: discord.Member):
+        """Remove a queue ban from a player.
+
+        Format: `[p]queueUnban <player>`"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        bans = await self.config.guild(ctx.guild).QueueBans()
+        player_id = str(player.id)
+        if player_id in bans:
+            del bans[player_id]
+            await self.config.guild(ctx.guild).QueueBans.set(bans)
+            await ctx.send(f":white_check_mark: {player.mention} has been unbanned from queueing.")
+        else:
+            await ctx.send(f"{player.display_name} is not currently banned from queueing.")
+
+    @commands.guild_only()
+    @commands.command(aliases=["qbans"])
+    async def listQueueBans(self, ctx: Context):
+        """List all active queue bans."""
+        if not await self.has_perms(ctx.author):
+            return
+
+        bans = await self.config.guild(ctx.guild).QueueBans()
+        now = datetime.datetime.now(datetime.timezone.utc).timestamp()
+
+        # Clean expired bans
+        expired = [pid for pid, ban in bans.items() if ban["expires"] <= now]
+        for pid in expired:
+            del bans[pid]
+        if expired:
+            await self.config.guild(ctx.guild).QueueBans.set(bans)
+
+        if not bans:
+            return await ctx.send("No active queue bans.")
+
+        embed = discord.Embed(title="Active Queue Bans", color=discord.Color.red())
+        for player_id, ban in bans.items():
+            expires_int = int(ban["expires"])
+            reason = ban.get("reason") or "No reason provided"
+            member = ctx.guild.get_member(int(player_id))
+            name = member.display_name if member else f"Unknown ({player_id})"
+            embed.add_field(
+                name=name,
+                value=f"Expires: <t:{expires_int}:F> (<t:{expires_int}:R>)\nReason: {reason}",
+                inline=False,
+            )
+        await ctx.send(embed=embed)
+
+    @commands.guild_only()
     @commands.command(aliases=["clrq"])
     async def clearQueue(self, ctx: Context):
         """Clear the queue"""
@@ -622,6 +712,21 @@ class SixMans(commands.Cog):
 
         if not self.queues_enabled[ctx.guild]:
             return await ctx.send(":x: Queueing is currently disabled.")
+
+        bans = await self.config.guild(ctx.guild).QueueBans()
+        player_id = str(player.id)
+        if player_id in bans:
+            if bans[player_id]["expires"] > datetime.datetime.now(datetime.timezone.utc).timestamp():
+                expires = int(bans[player_id]["expires"])
+                reason = bans[player_id].get("reason")
+                msg = f":x: You are banned from queueing until <t:{expires}:F> (<t:{expires}:R>)."
+                if reason:
+                    msg += f"\nReason: {reason}"
+                return await ctx.send(msg)
+            else:
+                # ban expired, clean it up
+                del bans[player_id]
+                await self.config.guild(ctx.guild).QueueBans.set(bans)
 
         if player in six_mans_queue.queue.queue:
             await ctx.send(
