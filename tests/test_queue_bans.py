@@ -398,7 +398,7 @@ class TestListQueueBansCommand:
 
         await cog.listQueueBans.callback(cog, ctx)
 
-        ctx.send.assert_called_once()
-        msg = ctx.send.call_args[0][0]
+        ctx.author.send.assert_called_once()
+        msg = ctx.author.send.call_args[0][0]
         assert "No active queue bans" in msg
 

@@ -460,9 +460,9 @@ class SixMans(commands.Cog):
             await self.config.guild(ctx.guild).QueueBans.set(bans)
 
         if not bans:
-            return await ctx.send("No active queue bans.")
+            return await ctx.author.send("No active queue bans.")
 
-        embed = discord.Embed(title="Active Queue Bans", color=discord.Color.red())
+        embed = discord.Embed(title=f"Active Queue Bans — {ctx.guild.name}", color=discord.Color.red())
         for player_id, ban in bans.items():
             expires_int = int(ban["expires"])
             reason = ban.get("reason") or "No reason provided"
@@ -473,7 +473,7 @@ class SixMans(commands.Cog):
                 value=f"Expires: <t:{expires_int}:F> (<t:{expires_int}:R>)\nReason: {reason}",
                 inline=False,
             )
-        await ctx.send(embed=embed)
+        await ctx.author.send(embed=embed)
 
     @commands.guild_only()
     @commands.command(aliases=["clrq"])
