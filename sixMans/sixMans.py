@@ -455,7 +455,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qban"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions(kick_members=True)
     async def queueBan(self, ctx: Context, player: discord.Member, duration_minutes: int, *, reason: str | None = None):
         """Ban a player from queueing for a specified number of minutes.
 
@@ -508,7 +508,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qunban"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions(kick_members=True)
     async def queueUnban(self, ctx: Context, player: discord.Member):
         """Remove a queue ban from a player.
 
@@ -531,7 +531,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qbans"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions(kick_members=True)
     async def listQueueBans(self, ctx: Context):
         """List all active queue bans."""
 
