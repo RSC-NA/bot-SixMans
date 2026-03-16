@@ -124,9 +124,7 @@ class CaptainsView(discord.ui.View):
             self.orange.append(pick)
 
         self.embed.clear_fields()
-        self.embed.add_field(
-            name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True
-        )
+        self.embed.add_field(name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True)
         self.embed.add_field(
             name="Orange Team",
             value="\n".join(p.mention for p in self.orange),
@@ -144,9 +142,7 @@ class CaptainsView(discord.ui.View):
                 continue
 
             if not b.custom_id:
-                log.warning(
-                    f"Unknown button without an ID in captain selection. Label: {b.label}"
-                )
+                log.warning(f"Unknown button without an ID in captain selection. Label: {b.label}")
                 continue
 
             log.debug(f"Button ID: {b.custom_id}")
@@ -164,12 +160,8 @@ class CaptainsView(discord.ui.View):
             elif len(self.orange) < self.team_size:
                 self.orange.append(self.pickable[0])
             else:
-                log.error(
-                    f"[{self.game.id}] Can't assign last pick. Both teams are full... "
-                )
-                await interaction.response.send_message(
-                    "Unable to assign final player to a team. Please open a modmail or contact 6 mans help role."
-                )
+                log.error(f"[{self.game.id}] Can't assign last pick. Both teams are full... ")
+                await interaction.response.send_message("Unable to assign final player to a team. Please open a modmail or contact 6 mans help role.")
                 return
             self.pickable = []
 
@@ -202,9 +194,7 @@ class CaptainsView(discord.ui.View):
         )
 
         # Team Fields
-        self.embed.add_field(
-            name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True
-        )
+        self.embed.add_field(name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True)
         self.embed.add_field(
             name="Orange Team",
             value="\n".join(p.mention for p in self.orange),
@@ -220,11 +210,7 @@ class CaptainsView(discord.ui.View):
                 )
             )
         else:
-            self.embed.set_footer(
-                text=(
-                    "If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."
-                )
-            )
+            self.embed.set_footer(text=("If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."))
 
     async def find_player_by_id(self, id: int) -> discord.Member | None:
         for p in self.pickable:

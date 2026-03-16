@@ -41,9 +41,7 @@ class SelfPickingView(discord.ui.View):
 
     async def update_embed(self):
         self.embed = discord.Embed(
-            title="{} Game | Team Selection".format(
-                self.channel.name.replace("-", " ").title()[4:]
-            ),
+            title="{} Game | Team Selection".format(self.channel.name.replace("-", " ").title()[4:]),
             description="Select :blue_circle: or :orange_circle: team with the buttons below.",
             color=discord.Color.blue(),
         )
@@ -52,17 +50,9 @@ class SelfPickingView(discord.ui.View):
 
         # List teams as they stand
         no_players_str = "[No Players]"
-        blue_players = (
-            "\n".join(p.mention for p in self.blue) if self.blue else no_players_str
-        )
-        orange_players = (
-            "\n".join(p.mention for p in self.orange) if self.orange else no_players_str
-        )
-        unplaced_players = (
-            ", ".join(p.mention for p in self.players)
-            if self.players
-            else no_players_str
-        )
+        blue_players = "\n".join(p.mention for p in self.blue) if self.blue else no_players_str
+        orange_players = "\n".join(p.mention for p in self.orange) if self.orange else no_players_str
+        unplaced_players = ", ".join(p.mention for p in self.players) if self.players else no_players_str
 
         ts_emoji = get_emoji(0x1F530)
 
@@ -73,9 +63,7 @@ class SelfPickingView(discord.ui.View):
         )
         self.embed.add_field(name="Blue Team", value=blue_players, inline=True)
         self.embed.add_field(name="Orange Team", value=orange_players, inline=True)
-        self.embed.add_field(
-            name="Unplaced Players", value=unplaced_players, inline=False
-        )
+        self.embed.add_field(name="Unplaced Players", value=unplaced_players, inline=False)
 
         # Add help information
         if self.game.helper_role:
@@ -87,11 +75,7 @@ class SelfPickingView(discord.ui.View):
                 )
             )
         else:
-            self.embed.set_footer(
-                text=(
-                    "If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."
-                )
-            )
+            self.embed.set_footer(text=("If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."))
 
     async def player_on_team(self, member: discord.Member) -> bool:
         if member in self.blue:
@@ -100,25 +84,17 @@ class SelfPickingView(discord.ui.View):
             return True
         return False
 
-    @discord.ui.button(
-        label="Blue", style=discord.ButtonStyle.blurple, emoji=chr(0x1F535)
-    )
-    async def pick_blue(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Blue", style=discord.ButtonStyle.blurple, emoji=chr(0x1F535))
+    async def pick_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
         if await self.player_on_team(interaction.user):
-            await interaction.response.send_message(
-                "You are already on a team...", ephemeral=True
-            )
+            await interaction.response.send_message("You are already on a team...", ephemeral=True)
             return
 
         if len(self.blue) >= self.team_size:
-            await interaction.response.send_message(
-                "Blue team is already full.", ephemeral=True
-            )
+            await interaction.response.send_message("Blue team is already full.", ephemeral=True)
             return
 
         self.blue.append(interaction.user)
@@ -133,25 +109,17 @@ class SelfPickingView(discord.ui.View):
 
         await interaction.response.defer(thinking=False, ephemeral=True)
 
-    @discord.ui.button(
-        label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0)
-    )
-    async def pick_orange(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0))
+    async def pick_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
         if await self.player_on_team(interaction.user):
-            await interaction.response.send_message(
-                "You are already on a team...", ephemeral=True
-            )
+            await interaction.response.send_message("You are already on a team...", ephemeral=True)
             return
 
         if len(self.orange) >= self.team_size:
-            await interaction.response.send_message(
-                "Orange team is already full.", ephemeral=True
-            )
+            await interaction.response.send_message("Orange team is already full.", ephemeral=True)
             return
 
         self.orange.append(interaction.user)

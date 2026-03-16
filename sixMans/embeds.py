@@ -146,9 +146,7 @@ class LoadingEmbed(YellowEmbed):
 
     def __init__(self, **kwargs):
         title = kwargs.pop("title", "Processing")
-        super().__init__(
-            title=title, description="Working on your request. Please wait...", **kwargs
-        )
+        super().__init__(title=title, description="Working on your request. Please wait...", **kwargs)
 
 
 class SuccessEmbed(GreenEmbed):

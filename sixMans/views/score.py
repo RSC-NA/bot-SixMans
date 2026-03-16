@@ -38,9 +38,7 @@ class ScoreReportView(discord.ui.View):
         selection_fmt = "\n".join(selections)
         desc = f"Captains, please verify the winner team.\n\n{selection_fmt}"
 
-        self.embed = discord.Embed(
-            title="Score Report", description=desc, color=discord.Color.blue()
-        )
+        self.embed = discord.Embed(title="Score Report", description=desc, color=discord.Color.blue())
         self.embed.set_footer(text="You have 2 minutes to confirm the score.")
 
     async def on_timeout(self):
@@ -63,9 +61,7 @@ class ScoreReportView(discord.ui.View):
         return True
 
     @discord.ui.button(label="Blue", style=discord.ButtonStyle.blurple)
-    async def report_blue(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def report_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -99,9 +95,7 @@ class ScoreReportView(discord.ui.View):
         await self.display_winner()
 
     @discord.ui.button(label="Orange", style=discord.ButtonStyle.green)
-    async def report_orange(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def report_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -135,9 +129,7 @@ class ScoreReportView(discord.ui.View):
         await self.display_winner()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-    async def cancel_report(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def cancel_report(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -177,9 +169,7 @@ class ScoreReportView(discord.ui.View):
             color=discord.Color.green(),
         )
 
-        embed.set_footer(
-            text="This channel and the team voice channels will be deleted in 30 seconds."
-        )
+        embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
         await self.msg.edit(embed=embed, view=None)
         self.stop()
 
@@ -203,9 +193,7 @@ class ForceResultView(AuthorOnlyView):
         self.msg = await self.channel.send(embed=embed, view=self)
 
     @discord.ui.button(label="Blue", style=discord.ButtonStyle.gray, emoji=chr(0x1F535))
-    async def report_blue(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def report_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -214,12 +202,8 @@ class ForceResultView(AuthorOnlyView):
         # Finish and display winner
         await self.display_winner()
 
-    @discord.ui.button(
-        label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0)
-    )
-    async def report_orange(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0))
+    async def report_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -229,9 +213,7 @@ class ForceResultView(AuthorOnlyView):
         await self.display_winner()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-    async def cancel_report(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def cancel_report(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -258,8 +240,6 @@ class ForceResultView(AuthorOnlyView):
             case Winner.ORANGE:
                 embed.colour = discord.Color.orange()
 
-        embed.set_footer(
-            text="This channel and the team voice channels will be deleted in 30 seconds."
-        )
+        embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
         await self.msg.edit(embed=embed, view=None)
         self.stop()

@@ -33,9 +33,7 @@ class GameModeVote(discord.ui.View):
         )
         self.embed.set_footer(text=f"Game ID: {self.game.id}")
 
-        self.embed.add_field(
-            name="Game Mode", value="\n".join(self.options), inline=True
-        )
+        self.embed.add_field(name="Game Mode", value="\n".join(self.options), inline=True)
         self.embed.add_field(
             name="Votes",
             value="\n".join([str(v) for v in self.votes.values()]),
@@ -43,9 +41,7 @@ class GameModeVote(discord.ui.View):
         )
 
         # Add 6 Mans helper role if available.
-        log.debug(
-            f"6 Mans Helper: {type(self.game.helper_role)} {self.game.helper_role}"
-        )
+        log.debug(f"6 Mans Helper: {type(self.game.helper_role)} {self.game.helper_role}")
         if self.game.helper_role:
             self.embed.set_footer(
                 text=(
@@ -54,11 +50,7 @@ class GameModeVote(discord.ui.View):
                 )
             )
         else:
-            self.embed.set_footer(
-                text=(
-                    "If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."
-                )
-            )
+            self.embed.set_footer(text=("If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."))
 
         # Create Buttons
         for mode in self.votes:

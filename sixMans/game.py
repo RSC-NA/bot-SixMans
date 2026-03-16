@@ -112,12 +112,8 @@ class Game:
         code = str(self.id)[-3:]
 
         # Create Game Text Channel
-        self.textChannel = await guild.create_text_channel(
-            f"{code} {self.queue.name} {self.queue.maxSize} Mans", category=category
-        )
-        await self.textChannel.set_permissions(
-            guild.default_role, view_channel=False, read_messages=False
-        )
+        self.textChannel = await guild.create_text_channel(f"{code} {self.queue.name} {self.queue.maxSize} Mans", category=category)
+        await self.textChannel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
         for player in self.players:
             if isinstance(player, discord.Member):
                 await self.textChannel.set_permissions(player, read_messages=True)
@@ -142,18 +138,10 @@ class Game:
 
         # manually add helper role perms if one is set
         if self.helper_role:
-            await self.textChannel.set_permissions(
-                self.helper_role, view_channel=True, read_messages=True
-            )
-            await general_vc.set_permissions(
-                self.helper_role, connect=True, move_members=True
-            )
-            await blue_vc.set_permissions(
-                self.helper_role, connect=True, move_members=True
-            )
-            await oran_vc.set_permissions(
-                self.helper_role, connect=True, move_members=True
-            )
+            await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
+            await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+            await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+            await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
 
         self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
@@ -194,9 +182,7 @@ class Game:
 
     async def captains_pick_teams(self):
         """Initiate Captains Game Mode"""
-        log.debug(
-            f"Game Players: {type(self.players)}\n{pformat([f'{p.id}: {p.name}' for p in self.players])}"
-        )
+        log.debug(f"Game Players: {type(self.players)}\n{pformat([f'{p.id}: {p.name}' for p in self.players])}")
         captains_view = CaptainsView(self)
         await captains_view.start()
         await captains_view.wait()
@@ -205,9 +191,7 @@ class Game:
             return
 
         if not captains_view:
-            await self.textChannel.send(
-                "Error: Unable to finish captains team selection. Please reach out for support."
-            )
+            await self.textChannel.send("Error: Unable to finish captains team selection. Please reach out for support.")
             return
 
         self.captains = captains_view.captains
@@ -239,9 +223,7 @@ class Game:
         await picking_view.wait()
 
         if not picking_view.finished:
-            await self.textChannel.send(
-                content="Error during team selection. Please reach out for support."
-            )
+            await self.textChannel.send(content="Error during team selection. Please reach out for support.")
             return
 
         self.orange = set(picking_view.orange)
@@ -277,9 +259,7 @@ class Game:
         await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
 
     # Team Selection helpers
-    async def process_team_selection_method(
-        self, team_selection: GameMode | None = None, force: bool = False
-    ):
+    async def process_team_selection_method(self, team_selection: GameMode | None = None, force: bool = False):
         log.debug(f"Processing team selection. Current State: {self.state}")
 
         if self.state == GameState.ONGOING and not force:
@@ -376,9 +356,7 @@ class Game:
         # Score Players, Avg
         score_total = 0
         for p_data in scores.values():
-            p_rank = (
-                p_data["Rank"] if ("Rank" in p_data and p_data["Rank"]) else rank_avg
-            )
+            p_rank = p_data["Rank"] if ("Rank" in p_data and p_data["Rank"]) else rank_avg
             p_wp = p_data["QWP"] if ("QWP" in p_data and p_data["QWP"]) else 0.5
             score_adj = (p_wp * 2) - 1  # +/- 1
 
@@ -445,9 +423,7 @@ class Game:
         if self.helper_role:
             embed.add_field(
                 name="Help",
-                value=Strings.more_sixmans_info_helper.format(
-                    helper=self.helper_role.mention
-                ),
+                value=Strings.more_sixmans_info_helper.format(helper=self.helper_role.mention),
                 inline=False,
             )
 
@@ -525,21 +501,14 @@ class Game:
             )
         help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if helper_role:
-            help_message = (
-                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. "
-                + help_message
-            )
+            help_message = f"If you need any help or have questions please contact someone with the {helper_role.mention} role. " + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
         embed.set_footer(text=f"Game ID: {self.id}")
 
         self.info_message = await self.textChannel.send(embed=embed)
 
     def has_lobby_info(self):
-        return (
-            self.roomName
-            and self.roomPass
-            and len(self.blue) + len(self.orange) == self.queue.maxSize
-        )
+        return self.roomName and self.roomPass and len(self.blue) + len(self.orange) == self.queue.maxSize
 
     async def post_lobby_info(self):
         if not self.has_lobby_info():

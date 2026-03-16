@@ -42,14 +42,10 @@ class CancelView(GameOnlyView):
     async def create_embed(self) -> discord.Embed:
         embed = OrangeEmbed(
             title="Cancel Game",
-            description=(
-                f"Vote to cancel the current game.\n\nTotal votes required: **{self.required_votes}**"
-            ),
+            description=(f"Vote to cancel the current game.\n\nTotal votes required: **{self.required_votes}**"),
         )
 
-        embed.add_field(
-            name="Player", value="\n".join([p.mention for p in self.votes]), inline=True
-        )
+        embed.add_field(name="Player", value="\n".join([p.mention for p in self.votes]), inline=True)
         embed.add_field(
             name="Vote",
             value="\n".join([str(v) for v in self.votes.values()]),
@@ -64,16 +60,12 @@ class CancelView(GameOnlyView):
         return False
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
         self.votes[interaction.user] = CancelVote.CANCEL
-        await interaction.response.send_message(
-            content="You have voted to cancel the game.", ephemeral=True
-        )
+        await interaction.response.send_message(content="You have voted to cancel the game.", ephemeral=True)
 
         # Check vote
         if self.has_required_votes(votetype=CancelVote.CANCEL):
@@ -82,9 +74,7 @@ class CancelView(GameOnlyView):
                 title="Game Cancelled",
                 description="The game has been forcibly cancelled by a vote.",
             )
-            cancel_embed.set_footer(
-                text="This channel and the team voice channels will be deleted in 30 seconds."
-            )
+            cancel_embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
             await self.msg.edit(embed=cancel_embed, view=None)
             self.stop()
 
@@ -98,14 +88,10 @@ class CancelView(GameOnlyView):
             return
 
         if not self.votes.get(interaction.user):
-            return await interaction.response.send_message(
-                content="You are not a valid player in this game.", ephemeral=True
-            )
+            return await interaction.response.send_message(content="You are not a valid player in this game.", ephemeral=True)
 
         self.votes[interaction.user] = CancelVote.PLAY
-        await interaction.response.send_message(
-            content="You have voted to play the match out.", ephemeral=True
-        )
+        await interaction.response.send_message(content="You have voted to play the match out.", ephemeral=True)
 
         # Check vote
         if self.has_required_votes(votetype=CancelVote.PLAY):
@@ -140,9 +126,7 @@ class ForceCancelView(AuthorOnlyView):
         self.msg = await self.channel.send(embed=embed, view=self)
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success)
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isinstance(interaction.user, discord.Member):
             return
 
@@ -152,9 +136,7 @@ class ForceCancelView(AuthorOnlyView):
             description="The game has been forcibly cancelled by a queue moderator.",
             color=discord.Color.green(),
         )
-        embed.set_footer(
-            text="This channel and the team voice channels will be deleted in 30 seconds."
-        )
+        embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
         await self.msg.edit(embed=embed, view=None)
         self.stop()
 
