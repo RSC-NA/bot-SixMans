@@ -1568,10 +1568,7 @@ class SixMans(commands.Cog):
 
         try:
             await ctx.send(
-                "{0} Mans helper role set to: {1}".format(
-                    self.queueMaxSize[ctx.guild],
-                    (await self._helper_role(ctx.guild)).name,
-                )
+                f"{self.queueMaxSize[ctx.guild]} Mans helper role set to: {(await self._helper_role(ctx.guild)).name}"
             )
         except AttributeError:
             await ctx.send(
@@ -1829,8 +1826,12 @@ class SixMans(commands.Cog):
         opposing_captain = None
         if game.state == GameState.NEW:
             players = list(game.players)
+            if player not in players:
+                return None
             players.remove(player)
             return random.choice(players)
+
+        opposing_captain = None
 
         if player in game.blue:
             opposing_captain = game.captains[1]  # Orange team captain
@@ -2035,12 +2036,7 @@ class SixMans(commands.Cog):
         embed = discord.Embed(color=discord.Colour.green())
         player_icon = player.display_avatar.url
         embed.set_author(
-            name="{0} added to the {1} queue. ({2}/{3})".format(
-                player.display_name,
-                six_mans_queue.name,
-                six_mans_queue.queue.qsize(),
-                six_mans_queue.maxSize,
-            ),
+            name=f"{player.display_name} added to the {six_mans_queue.name} queue. ({six_mans_queue.queue.qsize()}/{six_mans_queue.maxSize})",
             icon_url=player_icon,
         )
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
@@ -2052,12 +2048,7 @@ class SixMans(commands.Cog):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.red())
         embed.set_author(
-            name="{0} removed from the {1} queue. ({2}/{3})".format(
-                player.display_name,
-                six_mans_queue.name,
-                six_mans_queue.queue.qsize(),
-                six_mans_queue.maxSize,
-            ),
+            name=f"{player.display_name} removed from the {six_mans_queue.name} queue. ({six_mans_queue.queue.qsize()}/{six_mans_queue.maxSize})",
             icon_url=player.display_avatar.url,
         )
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
@@ -2066,15 +2057,13 @@ class SixMans(commands.Cog):
     def embed_queue_info(self, queue: SixMansQueue, default_lobby_vc=None):
         log.debug("")
         embed = discord.Embed(
-            title="{0} {1} Mans Info".format(queue.name, queue.maxSize),
+            title=f"{queue.name} {queue.maxSize} Mans Info",
             color=discord.Colour.blue(),
         )
         embed.add_field(name="Team Selection", value=queue.teamSelection, inline=False)
         embed.add_field(
             name="Channels",
-            value="{}\n".format(
-                ", ".join([channel.mention for channel in queue.channels])
-            ),
+            value=f"{', '.join([channel.mention for channel in queue.channels])}\n",
             inline=False,
         )
         embed.add_field(
@@ -2089,18 +2078,16 @@ class SixMans(commands.Cog):
             embed.add_field(name="Lobby VC", value=default_lobby_vc, inline=False)
 
         embed.add_field(
-            name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False
+            name="Games Played", value=f"{queue.gamesPlayed}\n", inline=False
         )
         embed.add_field(
             name="Unique Players All-Time",
-            value="{}\n".format(len(queue.players)),
+            value=f"{len(queue.players)}\n",
             inline=False,
         )
         embed.add_field(
             name="Point Breakdown",
-            value="**Per Series Played:** {0}\n**Per Series Win:** {1}".format(
-                queue.points[Strings.PP_PLAY_KEY], queue.points[Strings.PP_WIN_KEY]
-            ),
+            value=f"**Per Series Played:** {queue.points[Strings.PP_PLAY_KEY]}\n**Per Series Win:** {queue.points[Strings.PP_WIN_KEY]}",
             inline=False,
         )
         return embed
@@ -2108,13 +2095,11 @@ class SixMans(commands.Cog):
     def embed_queue_players(self, queue: SixMansQueue):
         player_list = self.format_player_list(queue)
         embed = discord.Embed(
-            title="{0} {1} Mans Queue".format(queue.name, queue.maxSize),
+            title=f"{queue.name} {queue.maxSize} Mans Queue",
             color=discord.Colour.blue(),
         )
         embed.add_field(
-            name="Players in Queue ({}/{})".format(
-                len(queue.queue.queue), queue.maxSize
-            ),
+            name=f"Players in Queue ({len(queue.queue.queue)}/{queue.maxSize})",
             value=player_list,
             inline=False,
         )
@@ -2122,7 +2107,7 @@ class SixMans(commands.Cog):
 
     def embed_active_games(self, guild, queueGames: dict[int, list[Game]]):
         embed = discord.Embed(
-            title="{0} Mans Active Games".format(self.queueMaxSize[guild]),
+            title=f"{self.queueMaxSize[guild]} Mans Active Games",
             color=discord.Colour.blue(),
         )
         for queueId in queueGames:
@@ -2131,17 +2116,12 @@ class SixMans(commands.Cog):
                 queue.name for queue in self.queues[guild] if queue.id == queueId
             )
             embed.add_field(
-                name="{}:".format(queueName),
-                value="{}".format(
-                    "\n".join(
+                name=f"{queueName}:",
+                value='\n'.join(
                         [
-                            "{0}\n{1}".format(
-                                str(game.id),
-                                ", ".join([player.mention for player in game.players]),
-                            )
+                            f"{str(game.id)}\n{', '.join([player.mention for player in game.players])}"
                             for game in games
                         ]
-                    )
                 ),
                 inline=False,
             )
@@ -2156,16 +2136,14 @@ class SixMans(commands.Cog):
             )
 
         embed = discord.Embed(
-            title="{0} {1} Mans {2} Leaderboard".format(
-                queue_name, self.queueMaxSize[ctx.guild], lb_format
-            ),
+            title=f"{queue_name} {self.queueMaxSize[ctx.guild]} Mans {lb_format} Leaderboard",
             color=discord.Colour.blue(),
         )
         embed.add_field(
-            name="Games Played", value="{}\n".format(games_played), inline=True
+            name="Games Played", value=f"{games_played}\n", inline=True
         )
         embed.add_field(
-            name="Unique Players", value="{}\n".format(len(sorted_players)), inline=True
+            name="Unique Players", value=f"{len(sorted_players)}\n", inline=True
         )
         embed.add_field(
             name="⠀", value="⠀", inline=True
@@ -2198,12 +2176,7 @@ class SixMans(commands.Cog):
                 player_wp = "N/A"
 
             statStrings.append(
-                "Points: `{0:4d}`  Wins: `{1:3d}`  GP: `{2:3d}` WP: `{3:5s}`".format(
-                    player_info[Strings.PLAYER_POINTS_KEY],
-                    player_wins,
-                    player_gp,
-                    player_wp,
-                )
+                f"Points: `{player_info[Strings.PLAYER_POINTS_KEY]:4d}`  Wins: `{player_wins:3d}`  GP: `{player_gp:3d}` WP: `{player_wp:5s}`"
             )
 
             if idx + 1 > 10:
@@ -2211,11 +2184,11 @@ class SixMans(commands.Cog):
 
         author = ctx.author
         try:
-            author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
+            author_index = [y[0] for y in sorted_players].index(f"{author.id}")
             if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
                 playerStrings.append(
-                    "\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name)
+                    f"\n`{author_index + 1}` **{author.display_name:25s}:**"
                 )
                 try:
                     author_wins = author_info[Strings.PLAYER_WINS_KEY]
@@ -2226,12 +2199,7 @@ class SixMans(commands.Cog):
                     author_wp = "N/A"
 
                 statStrings.append(
-                    "\nPoints: `{0:4d}`  Wins: `{1:3d}`  GP: `{2:3d}` WP: `{3:5s}`".format(
-                        author_info[Strings.PLAYER_POINTS_KEY],
-                        author_wins,
-                        author_gp,
-                        author_wp,
-                    )
+                    f"\nPoints: `{author_info[Strings.PLAYER_POINTS_KEY]:4d}`  Wins: `{author_wins:3d}`  GP: `{author_gp:3d}` WP: `{author_wp:5s}`"
                 )
         except Exception:
             pass
@@ -2264,7 +2232,7 @@ class SixMans(commands.Cog):
                     key=lambda x: x[1][Strings.PLAYER_WINS_KEY],
                     reverse=True,
                 )
-            ].index("{0}".format(player.id))
+            ].index(f"{player.id}")
             games_played_index = [
                 y[0]
                 for y in sorted(
@@ -2272,7 +2240,7 @@ class SixMans(commands.Cog):
                     key=lambda x: x[1][Strings.PLAYER_GP_KEY],
                     reverse=True,
                 )
-            ].index("{0}".format(player.id))
+            ].index(f"{player.id}")
             embed = discord.Embed(
                 title=f"{player.display_name} {rank_format} Rank",
                 description=f"Player rank data for {queue_name} queue ({queue_max_size} mans)",
@@ -2299,9 +2267,7 @@ class SixMans(commands.Cog):
         return embed
 
     def format_player_list(self, queue: SixMansQueue):
-        player_list = "{}".format(
-            ", ".join([player.mention for player in queue.queue.queue])
-        )
+        player_list = ", ".join([player.mention for player in queue.queue.queue])
         if player_list == "":
             player_list = "No players currently in the queue"
         return player_list

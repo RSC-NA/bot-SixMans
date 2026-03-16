@@ -487,35 +487,28 @@ class Game:
 
         embed.add_field(
             name="Blue Team",
-            value="{}\n".format(", ".join([player.mention for player in self.blue])),
+            value=", ".join([player.mention for player in self.blue]) + '\n',
             inline=False,
         )
         embed.add_field(
             name="Orange Team",
-            value="{}\n".format(", ".join([player.mention for player in self.orange])),
+            value=", ".join([player.mention for player in self.orange]) + '\n',
             inline=False,
         )
         if not invalid:
             embed.add_field(
                 name="Captains",
-                value="**Blue:** {0}\n**Orange:** {1}".format(
-                    self.captains[0].mention, self.captains[1].mention
-                ),
+                value=f"**Blue:** {self.captains[0].mention}\n**Orange:** {self.captains[1].mention}",
                 inline=False,
             )
         embed.add_field(
             name="Lobby Info",
-            value="**Name:** {0}\n**Password:** {1}".format(
-                self.roomName, self.roomPass
-            ),
+            value=f"**Name:** {self.roomName}\n**Password:** {self.roomPass}",
             inline=False,
         )
         embed.add_field(
             name="Point Breakdown",
-            value="**Playing:** {0}\n**Winning Bonus:** {1}".format(
-                self.queue.points[Strings.PP_PLAY_KEY],
-                self.queue.points[Strings.PP_WIN_KEY],
-            ),
+            value=f"**Playing:** {self.queue.points[Strings.PP_PLAY_KEY]}\n**Winning Bonus:** {self.queue.points[Strings.PP_WIN_KEY]}",
             inline=False,
         )
         if not invalid:
@@ -536,13 +529,10 @@ class Game:
         )
         if helper_role:
             help_message = (
-                "If you need any help or have questions please contact someone with the {0} role. ".format(
-                    helper_role.mention
-                )
-                + help_message
+                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. " + help_message
             )
         embed.add_field(name="Help", value=help_message, inline=False)
-        embed.set_footer(text="Game ID: {}".format(self.id))
+        embed.set_footer(text=f"Game ID: {self.id}")
 
         self.info_message = await self.textChannel.send(embed=embed)
 
@@ -557,23 +547,23 @@ class Game:
         if not self.has_lobby_info():
             return
         embed = discord.Embed(
-            title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
+            title=f"{self.queue.name} {self.queue.maxSize} Mans Game Info",
             color=discord.Colour.green(),
         )
         embed.add_field(
             name="Blue",
-            value="{}\n".format("\n".join([player.mention for player in self.blue])),
+            value="\n".join([player.mention for player in self.blue]) + '\n',
             inline=True,
         )
         embed.add_field(
             name="Orange",
-            value="{}\n".format("\n".join([player.mention for player in self.orange])),
+            value="\n".join([player.mention for player in self.orange]) + '\n',
             inline=True,
         )
 
         embed.add_field(
             name="Lobby Info",
-            value="```{} // {}```".format(self.roomName, self.roomPass),
+            value=f"```{self.roomName} // {self.roomPass}```",
             inline=False,
         )
         embed.set_footer(text="Game ID: {}".format(self.id))
