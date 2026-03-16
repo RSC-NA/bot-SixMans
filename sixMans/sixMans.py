@@ -2117,11 +2117,11 @@ class SixMans(commands.Cog):
             )
             embed.add_field(
                 name=f"{queueName}:",
-                value='\n'.join(
-                        [
-                            f"{str(game.id)}\n{', '.join([player.mention for player in game.players])}"
-                            for game in games
-                        ]
+                value="\n".join(
+                    [
+                        f"{str(game.id)}\n{', '.join([player.mention for player in game.players])}"
+                        for game in games
+                    ]
                 ),
                 inline=False,
             )
@@ -2139,9 +2139,7 @@ class SixMans(commands.Cog):
             title=f"{queue_name} {self.queueMaxSize[ctx.guild]} Mans {lb_format} Leaderboard",
             color=discord.Colour.blue(),
         )
-        embed.add_field(
-            name="Games Played", value=f"{games_played}\n", inline=True
-        )
+        embed.add_field(name="Games Played", value=f"{games_played}\n", inline=True)
         embed.add_field(
             name="Unique Players", value=f"{len(sorted_players)}\n", inline=True
         )
@@ -2571,7 +2569,12 @@ class SixMans(commands.Cog):
 
     async def _team_selection(self, guild: discord.Guild) -> GameMode:
         mode = await self.config.guild(guild).DefaultTeamSelection()
-        return GameMode(mode)
+        # Backwards compatibilitgy
+        if mode:
+            mode = mode.lower().capitalize()
+            return GameMode(mode)
+        else:
+            return GameMode.VOTE
 
     async def _save_queues_enabled(self, guild: discord.Guild, enabled: bool):
         return await self.config.guild(guild).QueuesEnabled.set(enabled)
