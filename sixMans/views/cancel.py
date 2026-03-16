@@ -43,8 +43,7 @@ class CancelView(GameOnlyView):
         embed = OrangeEmbed(
             title="Cancel Game",
             description=(
-                "Vote to cancel the current game.\n\n"
-                f"Total votes required: **{self.required_votes}**"
+                f"Vote to cancel the current game.\n\nTotal votes required: **{self.required_votes}**"
             ),
         )
 

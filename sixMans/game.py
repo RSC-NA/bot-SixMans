@@ -487,12 +487,12 @@ class Game:
 
         embed.add_field(
             name="Blue Team",
-            value=", ".join([player.mention for player in self.blue]) + '\n',
+            value=", ".join([player.mention for player in self.blue]) + "\n",
             inline=False,
         )
         embed.add_field(
             name="Orange Team",
-            value=", ".join([player.mention for player in self.orange]) + '\n',
+            value=", ".join([player.mention for player in self.orange]) + "\n",
             inline=False,
         )
         if not invalid:
@@ -523,13 +523,11 @@ class Game:
                 "cancel the game.".format(self.prefix),
                 inline=False,
             )
-        help_message = (
-            "If you think the bot isn't working correctly or have suggestions to improve it"
-            ", please contact the RSC Development Committee."
-        )
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
         if helper_role:
             help_message = (
-                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. " + help_message
+                f"If you need any help or have questions please contact someone with the {helper_role.mention} role. "
+                + help_message
             )
         embed.add_field(name="Help", value=help_message, inline=False)
         embed.set_footer(text=f"Game ID: {self.id}")
@@ -552,12 +550,12 @@ class Game:
         )
         embed.add_field(
             name="Blue",
-            value="\n".join([player.mention for player in self.blue]) + '\n',
+            value="\n".join([player.mention for player in self.blue]) + "\n",
             inline=True,
         )
         embed.add_field(
             name="Orange",
-            value="\n".join([player.mention for player in self.orange]) + '\n',
+            value="\n".join([player.mention for player in self.orange]) + "\n",
             inline=True,
         )
 

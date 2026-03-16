@@ -89,8 +89,7 @@ class SelfPickingView(discord.ui.View):
         else:
             self.embed.set_footer(
                 text=(
-                    "If you encounter any issues with the RSC 6 Mans bot or have suggestions. "
-                    "Please contact the RSC Development Committee."
+                    "If you encounter any issues with the RSC 6 Mans bot or have suggestions. Please contact the RSC Development Committee."
                 )
             )
 

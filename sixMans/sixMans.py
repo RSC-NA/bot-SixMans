@@ -122,8 +122,7 @@ class SixMans(commands.Cog):
         helper_role = await self._helper_role(channel.guild)
         helper_ping = " {}".format(helper_role.mention) if helper_role else ""
         await clone.send(
-            f":grey_exclamation:{helper_ping} "
-            f"This channel has been created because the last textChannel for the **{queue.name}** queue has been deleted."
+            f":grey_exclamation:{helper_ping} This channel has been created because the last textChannel for the **{queue.name}** queue has been deleted."
         )
         queue.channels.append(clone)
         await self._save_queues(channel.guild, self.queues[channel.guild])
@@ -141,8 +140,7 @@ class SixMans(commands.Cog):
             return
 
         msg = await ctx.send(
-            f"{ctx.author.mention} Please verify that you wish to clear **all** of the "
-            f"{self.queueMaxSize[ctx.guild]} Mans data for the guild."
+            f"{ctx.author.mention} Please verify that you wish to clear **all** of the {self.queueMaxSize[ctx.guild]} Mans data for the guild."
         )
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
@@ -755,8 +753,7 @@ class SixMans(commands.Cog):
 
         if not player.voice:
             return await ctx.send(
-                f"{player.mention}, you must be connected to a voice channel "
-                "to be moved to your team channel.",
+                f"{player.mention}, you must be connected to a voice channel to be moved to your team channel.",
                 allowed_mentions=discord.AllowedMentions(users=True),
             )
 
@@ -894,8 +891,7 @@ class SixMans(commands.Cog):
 
         if game_time.seconds < MINIMUM_GAME_TIME:
             await ctx.send(
-                ":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created."
-                f"\nCurrent time that's passed = **{game_time.seconds // 60} minute(s)**"
+                f":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created.\nCurrent time that's passed = **{game_time.seconds // 60} minute(s)**"
             )
             return
 
@@ -1442,10 +1438,7 @@ class SixMans(commands.Cog):
         await self._save_react_to_vote(ctx.guild, react_to_vote)
 
         action = "reactions" if react_to_vote else "commands"
-        message = (
-            f"Members of popped {self.queueMaxSize[ctx.guild]} "
-            f"Mans queues will vote for team reactions with **{action}**."
-        )
+        message = f"Members of popped {self.queueMaxSize[ctx.guild]} Mans queues will vote for team reactions with **{action}**."
         await ctx.send(message)
 
     @commands.guild_only()
@@ -1664,10 +1657,7 @@ class SixMans(commands.Cog):
         await self._remove_from_queue(player, six_mans_queue)
 
         # Send Player Message
-        auto_remove_msg = (
-            f"You have been timed out from the **{six_mans_queue.name} {six_mans_queue.maxSize} Mans queue**. "
-            "You'll need to use the queue command again if you wish to play some more."
-        )
+        auto_remove_msg = f"You have been timed out from the **{six_mans_queue.name} {six_mans_queue.maxSize} Mans queue**. You'll need to use the queue command again if you wish to play some more."
         channel = await self.get_visble_queue_channel(six_mans_queue, player)
 
         try:
@@ -2252,7 +2242,7 @@ class SixMans(commands.Cog):
             embed.set_thumbnail(url=player.display_avatar.url)
             embed.add_field(
                 name="Category",
-                value=f"Points: `{points_index+1}/{num_players}`\nWins: `{wins_index +1}/{num_players}`\nGames Played: `{games_played_index + 1}/{num_players}`",
+                value=f"Points: `{points_index + 1}/{num_players}`\nWins: `{wins_index + 1}/{num_players}`\nGames Played: `{games_played_index + 1}/{num_players}`",
                 inline=True,
             )
             embed.add_field(
@@ -2443,8 +2433,7 @@ class SixMans(commands.Cog):
                 )
 
                 log.debug(
-                    f"Guild: {guild.name} ID: {game.id} game.textChannel: {game.textChannel} "
-                    f"State: {game.state} Mode: {game.teamSelection}"
+                    f"Guild: {guild.name} ID: {game.id} game.textChannel: {game.textChannel} State: {game.state} Mode: {game.teamSelection}"
                 )
                 game_list.append(game)
             log.debug(f"Preloaded Games: {[g.id for g in game_list]}")
