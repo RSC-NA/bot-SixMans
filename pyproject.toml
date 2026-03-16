@@ -1,0 +1,27 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+asyncio_mode = "auto"
+python_files = [
+    "test_*.py",
+]
+env_files = [
+    ".env"
+]
+
+[tool.mypy]
+check_untyped_defs = true
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 200
+indent-width = 4
+exclude = ["data/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "C4", "SIM", "PTH", "TID", "ASYNC"]
+ignore = ["B904","SIM103", "SIM108"]
+
+[tool.codespell]
+ignore-words-list = "alltime"

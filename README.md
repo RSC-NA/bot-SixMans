@@ -4,7 +4,7 @@ The `sixMans` cog allows members of the guild to queue to play in a Team vs Team
 
 ## Installation
 
-The `sixMans` cog has no other cog dependancies.
+The `sixMans` cog has no other cog dependencies.
 
 ```
 <p>cog install RSCBot sixMans
@@ -97,3 +97,46 @@ Sets the role that will be assigned to individuals to resolve issues with 6 mans
 #### `<p>fcg` - Force cancel game
 
 #### `<p>kq <member>` - Kicks a member from a 6 mans queue
+
+# Queue Commands
+
+- `<p>moveMe` - Move me to my voice channel
+- `<p>queue` - Queue for a game
+- `<p>dequeue` - Dequeue from game
+- `<p>moveMe` -
+
+# Game Commands
+- `<p>lobbyInfo` - Display lobby information
+- `<p>cancelGame` - Vote to cancel a game
+- `<p>scoreReport` - Report the game result
+- `<p>moreInfo` - Detailed information on game
+- `<p>voteRandom` - Vote for random team selection
+- `<p>voteCaptains` - Vote for captains team selection
+- `<p>voteBalanced` - Vote for balanced team selection
+- `<p>voteSelfPickingTeams` - Vote self picking team selection
+
+# Admin Commands
+
+- `<p>clearSixMansData` - Clear **ALL** data for guild **(CAUTION)**
+- `<p>preLoadData` -  Load all data (called at cog_load)
+- `<p>addNewQueue, <ppg> <ppw> <*channels>` - Add new queue
+- `<p>editQueue <name> <new_name> <ppg> <ppw> <*channels>` - Edit an existing queue
+- `<p>setQueueTS <*name> <team_selection>` - Set team selection mode for queue
+- `<p>getQueueTS <name>` - Get team selection mode for queue
+- `<p>setQueueTimeout <minutes>` - Set queue timeout in minutes
+- `<p>getQueueTimeout` - Get current queue timeout
+- `<p>setDefaultQueueMaxSize <size>` - Set default size of queues
+- `<p>getDefaultQueueMaxSize` - Get default max size of queues
+- `<p>getQueueMaxSize <name>` - Get max size of specific queue
+- `<p>removeQueue` - Delete a queue
+- `<p>queueMultiple <*discord.Member>` - Force queue of multiple players
+- `<p>kickQueue <discord.Member>` - Kick a player from the queue
+- `<p>clearQueue` - Clear queued players from queue
+- `<p>enableQueues` - Enable all queues
+- `<p>disableQueues` - Disable all queues
+- `<p>forceTeamSelection <mode>` - Force a games team selection mode
+- `<p>forceCancelGame` - Force cancel a game
+- `<p>forceResult` - Force the result of a game
+
+*ppw: Points per Win*
+*ppg: Points per Game/Play*

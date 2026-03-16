@@ -33,7 +33,7 @@
                 },
                 "gamesPlayed": 1
             },
-    
+
             "queue2Id": {
                 "name": "queue2",
                 "channels": ["channel3Id", "channel4Id"],

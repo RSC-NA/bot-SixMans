@@ -1,7 +1,14 @@
-*.json
+.env
+.pytest_cache/
 .venv/
 .vscode/
 __pycache__/
+Lib/
+Scripts/
 pyvenv.cfg
 Tracker*.json
 *.swp
+.*_cache/
+
+# Custom
+pyprojectback.toml

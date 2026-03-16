@@ -1,15 +1,19 @@
-import collections
+import contextlib
 import datetime
 import logging
 import uuid
-import struct
 from queue import Queue
 from typing import List
-from .strings import Strings
-
-log = logging.getLogger("red.RSC6Mans.sixMans.queue")
 
 import discord
+
+from sixMans.embeds import SuccessEmbed
+from sixMans.enums import GameMode
+from sixMans.strings import Strings
+from sixMans.types import OrderedSet
+
+log = logging.getLogger("red.sixMans.queue")
+
 
 SELECTION_MODES = {
     0x1F3B2: Strings.RANDOM_TS,  # game_die
@@ -23,18 +27,19 @@ SELECTION_MODES = {
 class SixMansQueue:
     def __init__(
         self,
-        name,
+        name: str,
         guild: discord.Guild,
         channels: List[discord.TextChannel],
-        points,
-        players,
-        gamesPlayed,
-        maxSize,
-        teamSelection=Strings.RANDOM_TS,
-        category: discord.CategoryChannel = None,
-        lobby_vc: discord.VoiceChannel = None,
+        points: dict[str, int],
+        players: dict[str, dict],
+        gamesPlayed: int,
+        maxSize: int,
+        id: int | None = None,
+        category: discord.CategoryChannel | None = None,
+        lobby_vc: discord.VoiceChannel | None = None,
+        teamSelection=GameMode.VOTE,
     ):
-        self.id = uuid.uuid4().int
+        self.id = id or uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
         self.guild = guild
@@ -43,39 +48,17 @@ class SixMansQueue:
         self.players = players
         self.gamesPlayed = gamesPlayed
         self.maxSize = maxSize
-        self.teamSelection = teamSelection
+        self.teamSelection: GameMode = teamSelection
         self.category = category
         self.lobby_vc = lobby_vc
-        self.activeJoinLog = {}
+        self.activeJoinLog: dict[int, datetime.datetime] = {}
         # TODO: active join log could maintain queue during downtime
 
-    def _put(self, player):
-        self.queue.put(player)
-        # self.activeJoinLog[player.id] = datetime.datetime.now()
-
-    def _get(self):
-        player = self.queue.get()
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-        return player
-
-    def get_player_summary(self, player: discord.User):
+    def get_player_summary(self, player: discord.Member):
         try:
             return self.players[str(player.id)]
-        except:
+        except KeyError:
             return None
-
-    def _remove(self, player):
-        self.queue._remove(player)
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-
-    def _queue_full(self):
-        return self.queue.qsize() >= self.maxSize
 
     async def send_message(self, message="", embed=None):
         messages = []
@@ -84,32 +67,32 @@ class SixMansQueue:
         return messages
 
     async def set_team_selection(self, team_selection):
-        self.teamSelection = team_selection
-        emoji = self.get_ts_emoji()
-        if emoji:
-            await self.send_message(
-                f"Queue Team Selection has been set to {emoji} **{team_selection}**."
-            )
-        else:
-            await self.send_message(
-                f"Queue Team Selection has been set to **{team_selection}**."
-            )
+        self.teamSelection = GameMode(team_selection)
 
-    def get_ts_emoji(self):
-        for key, value in SELECTION_MODES.items():
-            if value == self.teamSelection:
-                return self._get_pick_reaction(key)
+    def queue_full(self):
+        return self.queue.qsize() >= self.maxSize
 
-    def _get_pick_reaction(self, int_or_hex):
-        try:
-            if type(int_or_hex) == int:
-                return struct.pack("<I", int_or_hex).decode("utf-32le")
-            if type(int_or_hex) == str:
-                return struct.pack("<I", int(int_or_hex, base=16)).decode(
-                    "utf-32le"
-                )  # i == react_hex
-        except:
-            return None
+    def clear(self):
+        while not self.queue.empty():
+            log.debug("Queue not empty.")
+            self.queue._get()
+        log.debug("Done clearing queue.")
+
+    # Internal
+
+    def _put(self, player):
+        self.queue.put(player)
+
+    def _get(self):
+        player = self.queue.get()
+        with contextlib.suppress(KeyError):
+            del self.activeJoinLog[player.id]
+        return player
+
+    def _remove(self, player):
+        self.queue._remove(player)
+        with contextlib.suppress(KeyError):
+            del self.activeJoinLog[player.id]
 
     def _to_dict(self):
         q_data = {
@@ -130,7 +113,7 @@ class SixMansQueue:
 
 
 class PlayerQueue(Queue):
-    def _init(self, maxsize):
+    def _init(self, maxsize: int):
         self.queue = OrderedSet()
 
     def _put(self, item):
@@ -145,54 +128,3 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
-
-
-class OrderedSet(collections.abc.MutableSet):
-    def __init__(self, iterable=None):
-        self.end = end = []
-        end += [None, end, end]  # sentinel node for doubly linked list
-        self.map = {}  # key --> [key, prev, next]
-        if iterable is not None:
-            self |= iterable
-
-    def __len__(self):
-        return len(self.map)
-
-    def __contains__(self, key):
-        return key in self.map
-
-    def add(self, key):
-        if key not in self.map:
-            end = self.end
-            curr = end[1]
-            curr[2] = end[1] = self.map[key] = [key, curr, end]
-
-    def discard(self, key):
-        if key in self.map:
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
-
-    def __iter__(self):
-        end = self.end
-        curr = end[2]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[2]
-
-    def __reversed__(self):
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-
-    def __repr__(self):
-        if not self:
-            return "%s()" % (self.__class__.__name__,)
-        return "%s(%r)" % (self.__class__.__name__, list(self))
-
-    def __eq__(self, other):
-        if isinstance(other, OrderedSet):
-            return len(self) == len(other) and list(self) == list(other)
-        return set(self) == set(other)
