@@ -2328,7 +2328,9 @@ class SixMans(commands.Cog):
 
                 # Default Game Mode
                 if q.TeamSelection:
-                    team_selection = GameMode(q.TeamSelection)
+                    # Backwards compatitiblity for game mode
+                    mode = q.TeamSelection.lower().capitalize()
+                    team_selection = GameMode(mode)
                 else:
                     team_selection = default_team_selection
 
