@@ -1631,9 +1631,11 @@ class SixMans(commands.Cog):
             log.debug(f"Exception adding {player.name} to queue: {exc}")
             raise exc
 
-        await self.create_timeout_task(
-            player, six_mans_queue, self.player_timeout_time[six_mans_queue.guild]
+        timeout = self.player_timeout_time.get(
+            six_mans_queue.guild, PLAYER_TIMEOUT_TIME
         )
+
+        await self.create_timeout_task(player, six_mans_queue, timeout)
 
     async def _remove_from_queue(
         self, player: discord.Member, six_mans_queue: SixMansQueue
@@ -1685,7 +1687,10 @@ class SixMans(commands.Cog):
             pass
 
     async def create_timeout_task(
-        self, player: discord.Member, six_mans_queue: SixMansQueue, time=None
+        self,
+        player: discord.Member,
+        six_mans_queue: SixMansQueue,
+        time=PLAYER_TIMEOUT_TIME,
     ):
         self.timeout_tasks.setdefault(player, {})
         self.timeout_tasks[player][six_mans_queue] = asyncio.create_task(
