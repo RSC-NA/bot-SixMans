@@ -13,7 +13,7 @@ log = logging.getLogger("red.sixMans.views.vote")
 
 class GameModeVote(discord.ui.View):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900.0)
         self.channel: discord.TextChannel = game.textChannel
         self.game: "Game" = game
         self.helper: discord.Role | None = helper
@@ -83,13 +83,13 @@ class GameModeVote(discord.ui.View):
         mode = GameMode(interaction.data["custom_id"])  # type: ignore
         log.debug(f"{interaction.user} vote: {mode}")
         # Check if user has already voted.
-        # if interaction.user in self.picked:
-        #     log.debug(f"{interaction.user} has already voted.")
-        #     await interaction.response.send_message(
-        #         content="You've already voted.",
-        #         ephemeral=True,
-        #     )
-        #     return
+        if interaction.user in self.picked:
+            log.debug(f"{interaction.user} has already voted.")
+            await interaction.response.send_message(
+                content="You've already voted.",
+                ephemeral=True,
+            )
+            return
         self.picked.append(interaction.user)
 
         self.votes[mode] += 1
@@ -112,9 +112,22 @@ class GameModeVote(discord.ui.View):
         await interaction.response.defer()
         await self.msg.edit(embed=self.embed)
 
-    # async def on_timeout():
-    #     """ NotImplemented: Do something if a player went AFK. """
-    #     pass
+    async def on_timeout(self):
+        """Pick the leading game mode when the vote times out."""
+        if self.result is None:
+            top_mode = max(self.votes, key=self.votes.get)  # type: ignore
+            # Only pick a winner if at least one vote was cast
+            if self.votes[top_mode] > 0:
+                self.result = top_mode
+            else:
+                self.result = GameMode.RANDOM
+
+        embed = discord.Embed(
+            title="Game Mode Vote",
+            description=f"Vote timed out. **{self.result.value}** has been selected.",
+            color=discord.Color.yellow(),
+        )
+        await self.msg.edit(embed=embed, view=None)
 
     @property
     def vote_finished(self) -> bool:

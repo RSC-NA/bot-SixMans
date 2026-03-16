@@ -92,6 +92,8 @@ class ScoreReportView(discord.ui.View):
                 color=discord.Color.red(),
             )
             await self.msg.edit(embed=embed, view=None)
+            self.stop()
+            return
 
         # Finish and display winner
         await self.display_winner()
@@ -126,6 +128,8 @@ class ScoreReportView(discord.ui.View):
                 color=discord.Color.red(),
             )
             await self.msg.edit(embed=embed, view=None)
+            self.stop()
+            return
 
         # Finish and display winner
         await self.display_winner()
@@ -160,16 +164,16 @@ class ScoreReportView(discord.ui.View):
         return False
 
     async def already_answered(self, member: discord.Member) -> bool:
-        return all(v != Winner.PENDING for v in self.answers.values())
+        return self.answers.get(member, Winner.PENDING) != Winner.PENDING
 
     async def both_captains_reported(self) -> bool:
         return all(v != Winner.PENDING for v in self.answers.values())
 
     async def display_winner(self):
-        self.winner = list(self.answers.values())[0]
+        self.result = list(self.answers.values())[0]
         embed = discord.Embed(
             title="Game Finished",
-            description=f"**{self.winner}** has been recorded as the winner of this game. Thanks for playing!",
+            description=f"**{self.result}** has been recorded as the winner of this game. Thanks for playing!",
             color=discord.Color.green(),
         )
 

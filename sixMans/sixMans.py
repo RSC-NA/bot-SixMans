@@ -29,7 +29,7 @@ from sixMans.views.score import ForceResultView, ScoreReportView
 
 log = logging.getLogger("red.sixMans")
 
-DEBUG = True  # CHANGE ME
+DEBUG = False
 MINIMUM_GAME_TIME = 300  # Seconds (5 Minutes)
 PLAYER_TIMEOUT_TIME = (
     10 if DEBUG else 1800
@@ -893,12 +893,11 @@ class SixMans(commands.Cog):
         game_time = msg_created_at - channel_created_at
 
         if game_time.seconds < MINIMUM_GAME_TIME:
-            log.error("REMOVE ME DUMMY")
-        #     await ctx.send(
-        #         ":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created."
-        #         f"\nCurrent time that's passed = **{game_time.seconds // 60} minute(s)**"
-        #     )
-        #     return
+            await ctx.send(
+                ":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created."
+                f"\nCurrent time that's passed = **{game_time.seconds // 60} minute(s)**"
+            )
+            return
 
         game, six_mans_queue = await self.get_info(ctx)
         if game is None or six_mans_queue is None:
