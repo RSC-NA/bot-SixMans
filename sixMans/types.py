@@ -25,6 +25,12 @@ class PlayerStats(TypedDict):
     Wins: int
 
 
+class QueueBan(TypedDict):
+    expires: int | float
+    banned_by: int
+    reason: str | None
+
+
 class SixMansConfig(TypedDict):
     AutoMove: bool
     CategoryChannel: discord.CategoryChannel | None
@@ -40,6 +46,7 @@ class SixMansConfig(TypedDict):
     QueuesEnabled: bool
     ReactToVote: bool
     Scores: list[PlayerScore]
+    QueueBans: dict[str, "QueueBan"]
 
 
 class OrderedSet(collections.abc.MutableSet):

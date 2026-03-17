@@ -74,8 +74,7 @@ def guild():
 def cog(guild):
     """Instantiate a real SixMans cog with mocked bot and config."""
     bot = MagicMock()
-    with patch("sixMans.sixMans.Config.get_conf") as mock_conf, \
-         patch("sixMans.sixMans.asyncio.create_task"):
+    with patch("sixMans.sixMans.Config.get_conf") as mock_conf, patch("sixMans.sixMans.asyncio.create_task"):
         # Set up config mock
         mock_conf.return_value.register_guild = MagicMock()
 
@@ -118,13 +117,17 @@ class TestBanCheckInQueue:
         player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
 
-        set_bans(cog, guild, {
-            str(player.id): {
-                "expires": future_ts,
-                "reason": "toxicity",
-                "banned_by": 999,
-            }
-        })
+        set_bans(
+            cog,
+            guild,
+            {
+                str(player.id): {
+                    "expires": future_ts,
+                    "reason": "toxicity",
+                    "banned_by": 999,
+                }
+            },
+        )
 
         ctx = make_ctx(guild, player)
         q = make_queue_empty()
@@ -176,13 +179,17 @@ class TestBanCheckInQueue:
         player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
 
-        set_bans(cog, guild, {
-            str(player.id): {
-                "expires": future_ts,
-                "reason": "toxicity",
-                "banned_by": 999,
-            }
-        })
+        set_bans(
+            cog,
+            guild,
+            {
+                str(player.id): {
+                    "expires": future_ts,
+                    "reason": "toxicity",
+                    "banned_by": 999,
+                }
+            },
+        )
 
         ctx = make_ctx(guild, player)
         q = make_queue_empty()
@@ -199,13 +206,17 @@ class TestBanCheckInQueue:
         player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
 
-        set_bans(cog, guild, {
-            str(player.id): {
-                "expires": future_ts,
-                "reason": None,
-                "banned_by": 999,
-            }
-        })
+        set_bans(
+            cog,
+            guild,
+            {
+                str(player.id): {
+                    "expires": future_ts,
+                    "reason": None,
+                    "banned_by": 999,
+                }
+            },
+        )
 
         ctx = make_ctx(guild, player)
         q = make_queue_empty()
@@ -305,9 +316,12 @@ class TestQueueBanCommand:
         await cog.queueBan.callback(cog, ctx, player, 0, reason="test")
 
         ctx.send.assert_called_once()
-        msg = ctx.send.call_args[0][0]
-        assert ":x:" in msg
-        assert "positive" in msg
+        assert ctx.send.call_args is not None
+        assert len(ctx.send.call_args) > 0
+
+        embed = ctx.send.call_args[1].get("embed")
+        assert embed is not None
+        assert "greater than 0 minutes" in embed.description
 
     @pytest.mark.asyncio
     async def test_ban_negative_duration_rejected(self, cog, guild):
@@ -319,9 +333,13 @@ class TestQueueBanCommand:
         await cog.queueBan.callback(cog, ctx, player, -5, reason="test")
 
         ctx.send.assert_called_once()
-        msg = ctx.send.call_args[0][0]
-        assert ":x:" in msg
-        assert "positive" in msg
+        assert ctx.send.call_args is not None
+        assert len(ctx.send.call_args) > 0
+
+        embed = ctx.send.call_args[1].get("embed")
+        assert embed is not None
+        assert "greater than 0 minutes" in embed.description
+
 
 class TestQueueUnbanCommand:
     """Test the queueUnban command behavior."""
@@ -398,7 +416,6 @@ class TestListQueueBansCommand:
 
         await cog.listQueueBans.callback(cog, ctx)
 
-        ctx.author.send.assert_called_once()
-        msg = ctx.author.send.call_args[0][0]
+        ctx.send.assert_called_once()
+        msg = ctx.send.call_args[0][0]
         assert "No active queue bans" in msg
-
