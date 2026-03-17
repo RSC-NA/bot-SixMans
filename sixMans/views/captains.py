@@ -28,13 +28,21 @@ class CaptainsView(discord.ui.View):
         self.captains = random.sample(list(self.pickable), 2)
         log.debug(f"Captains: {[f'{p.id}: {p.display_name}' for p in self.captains]}")
 
+        # Pick Order
+        self.pick_index = 0
+        self.pick_order: list[discord.Member] = []
+        self.build_snake_order()
+
         self.blue.append(self.captains[0])
         self.pickable.remove(self.captains[0])
         self.orange.append(self.captains[1])
         self.pickable.remove(self.captains[1])
 
         # Blue captain picks first
-        self.picking = self.captains[0]
+        self.picking = self.pick_order[0]
+
+        # Embed
+        self.embed: discord.Embed
 
     async def on_interaction(self, interaction: discord.Interaction) -> bool:
         if interaction.user != self.picking:
@@ -63,12 +71,47 @@ class CaptainsView(discord.ui.View):
 
         self.msg = await self.channel.send(embed=self.embed, view=self)
 
+    def build_snake_order(self) -> list:
+        """
+        Returns a list of captains in snake draft order.
+        """
+        if len(self.captains) != 2:
+            raise ValueError("Exactly 2 captains required")
+
+        first, second = self.captains
+        self.pick_order = []
+
+        total_picks = self.size - 2  # Exclude captains from pick order
+
+        while len(self.pick_order) < total_picks:
+            # Forward
+            self.pick_order.append(first)
+            if len(self.pick_order) < total_picks:
+                self.pick_order.append(second)
+
+            # Reverse (snake)
+            if len(self.pick_order) < total_picks:
+                self.pick_order.append(second)
+            if len(self.pick_order) < total_picks:
+                self.pick_order.append(first)
+
+        log.debug("Pick Order: " + " -> ".join(p.display_name for p in self.pick_order))
+        return self.pick_order[:total_picks]
+
     async def swap_picking(self):
         for captain in self.captains:
             if self.picking != captain:
                 self.picking = captain
                 log.debug(f"Now picking: {self.picking}")
                 break
+
+    async def advance_pick(self):
+        """Advance to the next captain based on snake draft order."""
+        self.pick_index += 1
+
+        if self.pick_index < len(self.pick_order):
+            self.picking = self.pick_order[self.pick_index]
+            log.debug(f"Now picking: {self.picking}")
 
     async def process_pick(self, interaction: discord.Interaction, **kwargs):
         """Process a game mode vote from button press"""
@@ -102,6 +145,7 @@ class CaptainsView(discord.ui.View):
         # Remove player from pickable as soon as possible. Help alleviate a race condition
         self.pickable.remove(pick)
 
+        # Validate teams aren't already full before assigning player to team
         if self.picking in self.blue:
             if len(self.blue) >= self.team_size:
                 log.debug(f"Blue team already has {self.team_size} players on it.")
@@ -168,7 +212,7 @@ class CaptainsView(discord.ui.View):
             self.pickable = []
 
         # Swap picking captain
-        await self.swap_picking()
+        await self.advance_pick()
 
         # Update embed
         await self.update_embed()

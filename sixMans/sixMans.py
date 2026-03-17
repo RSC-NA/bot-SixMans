@@ -2078,8 +2078,8 @@ class SixMans(commands.Cog):
             try:
                 member: discord.Member = await commands.MemberConverter().convert(ctx, player[0])
             except (
-                discord.ext.commands.MemberNotFound,
-                discord.ext.commands.CommandError,
+                commands.MemberNotFound,
+                commands.CommandError,
             ):
                 log.warning(f":x: Can't find player with id: {player[0]}")
                 continue
