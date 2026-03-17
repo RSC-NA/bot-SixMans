@@ -79,13 +79,15 @@ class CaptainsView(discord.ui.View):
         log.debug(f"Kwargs: {pformat(kwargs)}")
         log.debug(f"Interaction Data Type: {type(interaction.data)}")
 
+        if interaction.user not in self.captains:
+            log.debug(f"{interaction.user.display_name} is not a captain...")
+            await interaction.response.send_message(content="Only captains can pick players.", ephemeral=True)
+            return
+
         # Check which captain is picking
-        # if interaction.user != self.picking:
-        #     await interaction.response.send_message(
-        #         content="It's not your turn to pick. Please wait...",
-        #         ephemeral=True
-        #     )
-        #     return
+        if interaction.user != self.picking:
+            await interaction.response.send_message(content="It's not your turn to pick. Please wait...", ephemeral=True)
+            return
 
         pick_id = int(interaction.data["custom_id"])  # type: ignore
         pick = await self.find_player_by_id(pick_id)
