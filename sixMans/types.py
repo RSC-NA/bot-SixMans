@@ -44,7 +44,7 @@ class SixMansConfig(TypedDict):
 
 class OrderedSet(collections.abc.MutableSet):
     def __init__(self, iterable=None):
-        self.end = end = []  # type: ignore
+        self.end = end = []
         end += [None, end, end]  # sentinel node for doubly linked list
         self.map = {}  # key --> [key, prev, next]
         if iterable is not None:

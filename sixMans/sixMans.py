@@ -1457,11 +1457,17 @@ class SixMans(commands.Cog):
     # region helper methods
 
     async def has_perms(self, member: discord.Member):
-        if member.guild_permissions.administrator:
+        # Admins
+        if member.guild_permissions.manage_guild:
             return True
+
+        # Helpers
         helper_role = await self._helper_role(member.guild)
         if helper_role and helper_role in member.roles:
             return True
+
+        # Default to no permissions
+        return False
 
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._put(player)
