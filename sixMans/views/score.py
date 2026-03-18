@@ -47,6 +47,7 @@ class ScoreReportView(discord.ui.View):
 
     async def on_timeout(self):
         """Display time out message if we have reference to original"""
+        self.cancelled = True
         if self.msg:
             embed = discord.Embed(
                 title="Score Report",
