@@ -31,7 +31,7 @@ class Strings:
     # Messages
     more_sixmans_info_helper = """If you need any help or have questions please contact someone with the {helper} role."""
 
-    sixmans_highlight_commands = """`{prefix}sr <winning_team>` - score report
+    sixmans_highlight_commands = """`{prefix}sr` - score report
     `{prefix}moreinfo` - get detailed more info"""
 
     # Lobby Info
