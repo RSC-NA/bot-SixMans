@@ -111,7 +111,7 @@ class CancelView(GameOnlyView):
 class ForceCancelView(AuthorOnlyView):
     """Discord view for force cancelling a game"""
 
-    def __init__(self, author: discord.Member, game: "Game", timeout=30.0):
+    def __init__(self, author: discord.Member, game: "Game", timeout=60.0):
         super().__init__(author=author, timeout=timeout)
         self.game = game
         self.channel = game.textChannel

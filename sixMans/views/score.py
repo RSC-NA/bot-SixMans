@@ -47,7 +47,6 @@ class ScoreReportView(discord.ui.View):
 
     async def on_timeout(self):
         """Display time out message if we have reference to original"""
-        self.cancelled = True
         if self.msg:
             embed = discord.Embed(
                 title="Score Report",
@@ -210,7 +209,7 @@ class ScoreReportView(discord.ui.View):
 class ForceResultView(AuthorOnlyView):
     """Discord view for force reporting a game score"""
 
-    def __init__(self, author: discord.Member, game: "Game", timeout=30.0):
+    def __init__(self, author: discord.Member, game: "Game", timeout=60.0):
         super().__init__(author=author, timeout=timeout)
         self.game = game
         self.channel = game.textChannel

@@ -732,7 +732,9 @@ class SixMans(commands.Cog):
 
         cancel_view = ForceCancelView(author=ctx.author, game=game)
         await cancel_view.prompt()
-        await cancel_view.wait()
+
+        if await cancel_view.wait():
+            return
 
         if not cancel_view.result:
             return
@@ -758,7 +760,8 @@ class SixMans(commands.Cog):
 
         report_view = ForceResultView(author=ctx.author, game=game)
         await report_view.prompt()
-        await report_view.wait()
+        if await report_view.wait():
+            return
 
         if report_view.cancelled:
             return
@@ -914,7 +917,8 @@ class SixMans(commands.Cog):
 
         cancel_view = CancelView(game=game)
         await cancel_view.prompt()
-        await cancel_view.wait()
+        if await cancel_view.wait():
+            return
 
         if not cancel_view.result:
             return
@@ -963,7 +967,8 @@ class SixMans(commands.Cog):
         # Prompt for winner
         report_view = ScoreReportView(game=game)
         await report_view.prompt()
-        await report_view.wait()
+        if await report_view.wait():
+            return
 
         if report_view.cancelled:
             return
