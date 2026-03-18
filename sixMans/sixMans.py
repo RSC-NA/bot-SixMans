@@ -1901,6 +1901,7 @@ class SixMans(commands.Cog):
             helper_role=await self._helper_role(guild),
             automove=await self._get_automove(guild),
             prefix=prefix,
+            save_callback=lambda: self._save_games(guild, self.games[guild]),
         )
         await game.create_game_channels(await self._category(guild))
 
@@ -1909,6 +1910,8 @@ class SixMans(commands.Cog):
         await self._save_games(guild, self.games[guild])
 
         await game.process_team_selection_method()
+        # Save again once teams are selected
+        await self._save_games(guild, self.games[guild])
         return game
 
     async def get_info(self, ctx: Context) -> tuple[Game | None, SixMansQueue | None]:
@@ -2350,6 +2353,7 @@ class SixMans(commands.Cog):
                     prefix=g.Prefix,
                     teamSelection=g.TeamSelection,
                     winner=g.Winner,
+                    save_callback=lambda g=guild: self._save_games(g, self.games[g]),  # type: ignore[misc]
                 )
 
                 log.debug(f"Guild: {guild.name} ID: {game.id} game.textChannel: {game.textChannel} State: {game.state} Mode: {game.teamSelection}")

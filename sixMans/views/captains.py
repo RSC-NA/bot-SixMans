@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 import discord
 
+from sixMans import utils
+
 if TYPE_CHECKING:
     from sixMans.game import Game
 
@@ -170,10 +172,10 @@ class CaptainsView(discord.ui.View):
             self.orange.append(pick)
 
         self.embed.clear_fields()
-        self.embed.add_field(name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True)
+        self.embed.add_field(name="Blue Team", value=utils.format_team_mentions(self.blue, self.captains), inline=True)
         self.embed.add_field(
             name="Orange Team",
-            value="\n".join(p.mention for p in self.orange),
+            value=utils.format_team_mentions(self.orange, self.captains),
             inline=True,
         )
 
@@ -240,10 +242,10 @@ class CaptainsView(discord.ui.View):
         )
 
         # Team Fields
-        self.embed.add_field(name="Blue Team", value="\n".join(p.mention for p in self.blue), inline=True)
+        self.embed.add_field(name="Blue Team", value=utils.format_team_mentions(self.blue, self.captains), inline=True)
         self.embed.add_field(
             name="Orange Team",
-            value="\n".join(p.mention for p in self.orange),
+            value=utils.format_team_mentions(self.orange, self.captains),
             inline=True,
         )
 

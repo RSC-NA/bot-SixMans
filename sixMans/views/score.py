@@ -29,7 +29,11 @@ class ScoreReportView(discord.ui.View):
 
     async def prompt(self):
         await self.update_embed()
-        self.msg = await self.channel.send(embed=self.embed, view=self)
+        captains_mention = " ".join(c.mention for c in self.captains)
+        if not self.channel:
+            log.error("No text channel found for game {}. Cannot prompt score report.".format(self.game.id))
+            return
+        self.msg = await self.channel.send(content=captains_mention, embed=self.embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
 
     async def update_embed(self):
         selections = []
@@ -113,6 +117,34 @@ class ScoreReportView(discord.ui.View):
 
         if not await self.both_captains_reported():
             await interaction.response.defer(thinking=False, ephemeral=True)
+            return
+
+        if not await self.unanimous_vote():
+            embed = discord.Embed(
+                title="Score Report",
+                description="The captains did not select a winner unanimously. Please try again...",
+                color=discord.Color.red(),
+            )
+            await self.msg.edit(embed=embed, view=None)
+            self.stop()
+            return
+
+        # Finish and display winner
+        await self.display_winner()
+
+    async def captains_report(self, member: discord.Member, winner: Winner):
+        if member not in self.captains:
+            return
+
+        if await self.already_answered(member):
+            return
+
+        # Update Embed
+        self.answers[member] = winner
+        await self.update_embed()
+        await self.msg.edit(embed=self.embed, view=self)
+
+        if not await self.both_captains_reported():
             return
 
         if not await self.unanimous_vote():

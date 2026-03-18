@@ -1,8 +1,10 @@
 import logging
 import random
 import uuid
+from collections.abc import Callable, Coroutine
 from itertools import combinations
 from pprint import pformat
+from typing import Any
 
 import discord
 
@@ -52,8 +54,10 @@ class Game:
         text_channel: discord.TextChannel | None = None,
         voice_channels: list[discord.VoiceChannel] | None = None,
         winner: Winner = Winner.PENDING,
+        save_callback: Callable[[], Coroutine[Any, Any, None]] | None = None,
     ):
         # Setup
+        self.save_callback = save_callback
         self.player_votes: dict[discord.Member, int] = {}
         self.reaction_lock = False
 
@@ -160,7 +164,7 @@ class Game:
 
         if not vote_view.result:
             # Vote failed. We need to decide what to do here.
-            await self.textChannel.send("Error during game mode vote... Please report.")
+            await self.textChannel.send("Error during game mode vote... Please request help")
             return
 
         self.state = GameState.SELECTION
@@ -172,13 +176,22 @@ class Game:
             case GameMode.CAPTAINS:
                 await self.captains_pick_teams()
             case GameMode.RANDOM:
+                await self.assign_captains()
                 await self.pick_random_teams()
             case GameMode.SELF_PICK:
+                await self.assign_captains()
                 await self.self_picking_teams()
             case GameMode.BALANCED:
+                await self.assign_captains()
                 await self.pick_balanced_teams()
             case _:
                 log.error(f"Error during game mode vote: {vote_view.result}")
+
+    async def assign_captains(self):
+        if len(self.players) < 2:
+            raise ValueError("Not enough players to assign captains")
+        self.captains = random.sample(list(self.players), 2)
+        log.debug(f"Captains: {[f'{p.id}: {p.display_name}' for p in self.captains]}")
 
     async def captains_pick_teams(self):
         """Initiate Captains Game Mode"""
@@ -286,9 +299,14 @@ class Game:
             case GameMode.DEFAULT:
                 # Use queue default game mode
                 await self.process_team_selection_method(self.queue.teamSelection)
+                return
             case _:
                 # End game here potentially?
                 log.error(f"Error processing team selection mode: {self.teamSelection}")
+                return
+
+        if self.save_callback:
+            await self.save_callback()
 
     def get_balanced_teams(self):
         # Get relevant info from helpers
@@ -397,12 +415,12 @@ class Game:
         # Teams
         embed.add_field(
             name="Blue",
-            value="\n".join([player.mention for player in self.blue]),
+            value=utils.format_team_mentions(self.blue, self.captains),
             inline=True,
         )
         embed.add_field(
             name="Orange",
-            value="\n".join([player.mention for player in self.orange]),
+            value=utils.format_team_mentions(self.orange, self.captains),
             inline=True,
         )
         embed.add_field(
