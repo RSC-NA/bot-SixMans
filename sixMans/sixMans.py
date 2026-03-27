@@ -1763,8 +1763,9 @@ class SixMans(commands.Cog):
                 await member.move_to(vc)
 
     async def _remove_game(self, guild: discord.Guild, game: Game):
-        # Save games
-        self.games[guild].remove(game)
+        """Remove game from active games and delete channels."""
+        with contextlib.suppress(ValueError):
+            self.games[guild].remove(game)
         await self._save_games(guild, self.games[guild])
 
         # Sleep before removal
