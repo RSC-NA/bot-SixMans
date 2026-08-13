@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans import utils
+from sixMans.views import safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -16,7 +17,7 @@ log = logging.getLogger("red.sixMans.views.captains")
 class CaptainsView(discord.ui.View):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=None)
-        self.channel: discord.TextChannel = game.textChannel
+        self.channel: discord.TextChannel | None = game.textChannel
         self.game: "Game" = game
         self.helper: discord.Role | None = helper
         self.pickable: list[discord.Member] = list(self.game.players)
@@ -58,6 +59,11 @@ class CaptainsView(discord.ui.View):
 
     async def start(self):
         """Start picks for captains"""
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot start captains selection.")
+            self.stop()
+            return
+
         await self.update_embed()
 
         # Add player buttons
@@ -221,11 +227,11 @@ class CaptainsView(discord.ui.View):
 
         if len(self.pickable) == 0:
             log.debug("Captains have finished selecting teams.")
-            await self.msg.edit(embed=self.embed, view=None)
+            await safe_edit(self.msg, embed=self.embed, view=None)
             self.finished = True
             self.stop()
         else:
-            await self.msg.edit(embed=self.embed, view=self)
+            await safe_edit(self.msg, embed=self.embed, view=self)
 
         await interaction.response.defer(thinking=False, ephemeral=True)
 

@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import itertools
 import logging
 import uuid
 from queue import Queue
@@ -7,10 +8,9 @@ from typing import List
 
 import discord
 
-from sixMans.embeds import SuccessEmbed
 from sixMans.enums import GameMode
 from sixMans.strings import Strings
-from sixMans.types import OrderedSet
+from sixMans.types import OrderedSet, PlayerStats
 
 log = logging.getLogger("red.sixMans.queue")
 
@@ -31,7 +31,7 @@ class SixMansQueue:
         guild: discord.Guild,
         channels: List[discord.TextChannel],
         points: dict[str, int],
-        players: dict[str, dict],
+        players: dict[str, PlayerStats],
         gamesPlayed: int,
         maxSize: int,
         id: int | None = None,
@@ -60,10 +60,13 @@ class SixMansQueue:
         except KeyError:
             return None
 
-    async def send_message(self, message="", embed=None):
+    async def send_message(self, message: str = "", embed: discord.Embed | None = None) -> list[discord.Message]:
         messages = []
         for channel in self.channels:
-            messages.append(await channel.send(message, embed=embed))
+            if embed is None:
+                messages.append(await channel.send(message))
+            else:
+                messages.append(await channel.send(message, embed=embed))
         return messages
 
     async def set_team_selection(self, team_selection):
@@ -88,6 +91,14 @@ class SixMansQueue:
         with contextlib.suppress(KeyError):
             del self.activeJoinLog[player.id]
         return player
+
+    def _peek(self, count: int) -> list:
+        """Return the next `count` players without removing them from the queue.
+
+        Ordering matches `_get()`, which pops from the front of the OrderedSet.
+        """
+        with self.queue.mutex:
+            return list(itertools.islice(self.queue.queue, count))
 
     def _remove(self, player):
         self.queue._remove(player)

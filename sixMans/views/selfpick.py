@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.utils import get_emoji
+from sixMans.views import safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -14,7 +15,7 @@ log = logging.getLogger("red.sixMans.views.selfpick")
 class SelfPickingView(discord.ui.View):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=None)
-        self.channel: discord.TextChannel = game.textChannel
+        self.channel: discord.TextChannel | None = game.textChannel
         self.game: "Game" = game
         self.helper: discord.Role | None = helper
         self.players: list[discord.Member] = list(self.game.players)
@@ -36,12 +37,19 @@ class SelfPickingView(discord.ui.View):
 
     async def prompt(self):
         """Start self picking"""
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot start self picking.")
+            self.stop()
+            return
+
         await self.update_embed()
         self.msg = await self.channel.send(embed=self.embed, view=self)
 
     async def update_embed(self):
+        # Channel names are prefixed with a 4 character game code that is trimmed off here.
+        title = "{} Game | Team Selection".format(self.channel.name.replace("-", " ").title()[4:]) if self.channel else "Game | Team Selection"
         self.embed = discord.Embed(
-            title="{} Game | Team Selection".format(self.channel.name.replace("-", " ").title()[4:]),
+            title=title,
             description="Select :blue_circle: or :orange_circle: team with the buttons below.",
             color=discord.Color.blue(),
         )
@@ -102,10 +110,11 @@ class SelfPickingView(discord.ui.View):
         await self.update_embed()
 
         if len(self.unplaced) == 0:
-            await self.msg.edit(embed=self.embed, view=None)
+            await safe_edit(self.msg, embed=self.embed, view=None)
+            self.finished = True
             self.stop()
         else:
-            await self.msg.edit(embed=self.embed, view=self)
+            await safe_edit(self.msg, embed=self.embed, view=self)
 
         await interaction.response.defer(thinking=False, ephemeral=True)
 
@@ -127,9 +136,10 @@ class SelfPickingView(discord.ui.View):
         await self.update_embed()
 
         if len(self.unplaced) == 0:
-            await self.msg.edit(embed=self.embed, view=None)
+            await safe_edit(self.msg, embed=self.embed, view=None)
+            self.finished = True
             self.stop()
         else:
-            await self.msg.edit(embed=self.embed, view=self)
+            await safe_edit(self.msg, embed=self.embed, view=self)
 
         await interaction.response.defer(thinking=False, ephemeral=True)

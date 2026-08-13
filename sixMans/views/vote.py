@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.enums import GameMode
+from sixMans.views import safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -14,7 +15,7 @@ log = logging.getLogger("red.sixMans.views.vote")
 class GameModeVote(discord.ui.View):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=900.0)
-        self.channel: discord.TextChannel = game.textChannel
+        self.channel: discord.TextChannel | None = game.textChannel
         self.game: "Game" = game
         self.helper: discord.Role | None = helper
         self.options: list[str] = GameMode.to_options()
@@ -22,6 +23,7 @@ class GameModeVote(discord.ui.View):
         self.result: GameMode | None = None
         self.votes: dict = GameMode.to_dict()
         self.size = len(game.players)
+        self.msg: discord.Message | None = None
         log.debug(f"Starting game mode vote: {self.channel}")
 
     async def start(self):
@@ -62,7 +64,17 @@ class GameModeVote(discord.ui.View):
             )
             button.callback = self.process_vote  # type: ignore
             self.add_item(button)
-        self.msg = await self.channel.send(embed=self.embed, view=self)
+
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot start game mode vote.")
+            self.stop()
+            return
+
+        try:
+            self.msg = await self.channel.send(embed=self.embed, view=self)
+        except discord.HTTPException as exc:
+            log.warning(f"Unable to post game mode vote for game {self.game.id}: {exc}")
+            self.stop()
 
     async def process_vote(self, interaction: discord.Interaction):
         """Process a game mode vote from button press"""
@@ -97,14 +109,19 @@ class GameModeVote(discord.ui.View):
         if self.vote_finished:
             log.debug("Game mode vote Finished.")
             self.stop()
-            await self.msg.edit(embed=self.embed, view=None)
+            await safe_edit(self.msg, embed=self.embed, view=None)
 
         # Defer interaction and update embed
         await interaction.response.defer()
-        await self.msg.edit(embed=self.embed)
+        await safe_edit(self.msg, embed=self.embed)
 
     async def on_timeout(self):
-        """Pick the leading game mode when the vote times out."""
+        """Pick the leading game mode when the vote times out.
+
+        The result must be resolved before the edit is attempted. The game's
+        text channel may already be gone, and the caller waiting on this view
+        still needs a mode to dispatch on.
+        """
         if self.result is None:
             top_mode = max(self.votes, key=self.votes.get)  # type: ignore
             # Only pick a winner if at least one vote was cast
@@ -118,7 +135,7 @@ class GameModeVote(discord.ui.View):
             description=f"Vote timed out. **{self.result.value}** has been selected.",
             color=discord.Color.yellow(),
         )
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
 
     @property
     def vote_finished(self) -> bool:

@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import random
 import uuid
@@ -61,6 +62,12 @@ class Game:
         self.player_votes: dict[discord.Member, int] = {}
         self.reaction_lock = False
 
+        # Live team selection view, so it can be torn down if the game goes away.
+        # Not persisted -- `to_dict()` writes explicit keys and `_load_games()`
+        # rebuilds through `__init__`, so these always start clean.
+        self.active_view: discord.ui.View | None = None
+        self.aborted: bool = False
+
         # Core
         self.id = id or uuid.uuid4().int
         self.queue: SixMansQueue = queue
@@ -108,58 +115,101 @@ class Game:
 
     # Team Management
     async def create_game_channels(self, category=None):
+        """Create the text and voice channels for this game.
+
+        If any channel or guild wide overwrite fails, every channel created so far is deleted and
+        the error is re-raised so the caller can return the players to the queue. Failing to grant
+        an individual player access is not fatal.
+        """
         if not category:
             category = self.queue.category
         guild = self.queue.guild
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
 
         code = str(self.id)[-3:]
+        created: list[discord.abc.GuildChannel] = []
+        failed_players: list[discord.Member] = []
 
-        # Create Game Text Channel
-        self.textChannel = await guild.create_text_channel(f"{code} {self.queue.name} {self.queue.maxSize} Mans", category=category)
-        await self.textChannel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
-        for player in self.players:
-            if isinstance(player, discord.Member):
-                await self.textChannel.set_permissions(player, read_messages=True)
+        try:
+            # Create Game Text Channel
+            self.textChannel = await guild.create_text_channel(f"{code} {self.queue.name} {self.queue.maxSize} Mans", category=category)
+            created.append(self.textChannel)
+            await self.textChannel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
+            for player in self.players:
+                if not isinstance(player, discord.Member):
+                    continue
+                try:
+                    await self.textChannel.set_permissions(player, read_messages=True)
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException) as exc:
+                    # 404 Unknown Overwrite means the player is no longer in the guild. Don't tear
+                    # down a lobby the other players are waiting on over one missing member.
+                    log.warning(f"Unable to grant {player.id} access to game channel {self.textChannel.name}", exc_info=exc)
+                    failed_players.append(player)
 
-        # Create a general VC lobby for all players in a session
-        general_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} General VC",
-            category=category,
-        )
-        await general_vc.set_permissions(guild.default_role, connect=False)
+            # Create a general VC lobby for all players in a session
+            general_vc = await guild.create_voice_channel(
+                f"{code} | {self.queue.name} General VC",
+                category=category,
+            )
+            created.append(general_vc)
+            await general_vc.set_permissions(guild.default_role, connect=False)
 
-        blue_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} Blue Team",
-            category=category,
-        )
-        await blue_vc.set_permissions(guild.default_role, connect=False)
-        oran_vc = await guild.create_voice_channel(
-            f"{code} | {self.queue.name} Orange Team",
-            category=category,
-        )
-        await oran_vc.set_permissions(guild.default_role, connect=False)
+            blue_vc = await guild.create_voice_channel(
+                f"{code} | {self.queue.name} Blue Team",
+                category=category,
+            )
+            created.append(blue_vc)
+            await blue_vc.set_permissions(guild.default_role, connect=False)
+            oran_vc = await guild.create_voice_channel(
+                f"{code} | {self.queue.name} Orange Team",
+                category=category,
+            )
+            created.append(oran_vc)
+            await oran_vc.set_permissions(guild.default_role, connect=False)
 
-        # manually add helper role perms if one is set
-        if self.helper_role:
-            await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
-            await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
-            await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
-            await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+            # manually add helper role perms if one is set
+            if self.helper_role:
+                await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
+                await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+                await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+                await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+        except (discord.HTTPException, discord.Forbidden) as exc:
+            log.exception(f"Error creating game channels for game {self.id}. Removing partially created channels.", exc_info=exc)
+            for channel in created:
+                with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
+                    await channel.delete()
+            self.textChannel = None
+            self.voiceChannels = []
+            raise
 
         self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
         # Mentions all players
-        await self.textChannel.send(" ".join(player.mention for player in self.players))
+        with contextlib.suppress(discord.HTTPException, discord.Forbidden, discord.NotFound):
+            await self.textChannel.send(" ".join(player.mention for player in self.players))
+
+        if failed_players:
+            names = ", ".join(player.display_name for player in failed_players)
+            helper_ping = f" {self.helper_role.mention}" if self.helper_role else ""
+            with contextlib.suppress(discord.HTTPException, discord.Forbidden, discord.NotFound):
+                await self.textChannel.send(
+                    f":warning:{helper_ping} Unable to give **{names}** access to this channel. They may have left the server. This game may need to be cancelled with `{self.prefix}fcg`."
+                )
 
     # Team Selection
     async def vote_team_selection(self):
         """Start a vote for game mode."""
         vote_view = GameModeVote(self)
-        await vote_view.start()
-        await vote_view.wait()
+        self.active_view = vote_view
+        try:
+            await vote_view.start()
+            await vote_view.wait()
+        finally:
+            if self.active_view is vote_view:
+                self.active_view = None
 
-        if not self.textChannel:
+        if self.aborted or self.channel_deleted or not self.textChannel:
+            log.debug(f"Game {self.id} went away during the game mode vote. Skipping team selection.")
             return
 
         if not vote_view.result:
@@ -197,13 +247,19 @@ class Game:
         """Initiate Captains Game Mode"""
         log.debug(f"Game Players: {type(self.players)}\n{pformat([f'{p.id}: {p.name}' for p in self.players])}")
         captains_view = CaptainsView(self)
-        await captains_view.start()
-        await captains_view.wait()
+        self.active_view = captains_view
+        try:
+            await captains_view.start()
+            await captains_view.wait()
+        finally:
+            if self.active_view is captains_view:
+                self.active_view = None
 
-        if not self.textChannel:
+        if self.aborted or self.channel_deleted or not self.textChannel:
+            log.debug(f"Game {self.id} went away during captains selection. Skipping team assignment.")
             return
 
-        if not captains_view:
+        if not captains_view.finished:
             await self.textChannel.send("Error: Unable to finish captains team selection. Please reach out for support.")
             return
 
@@ -232,8 +288,17 @@ class Game:
 
     async def self_picking_teams(self):
         picking_view = SelfPickingView(game=self, helper=self.helper_role)
-        await picking_view.prompt()
-        await picking_view.wait()
+        self.active_view = picking_view
+        try:
+            await picking_view.prompt()
+            await picking_view.wait()
+        finally:
+            if self.active_view is picking_view:
+                self.active_view = None
+
+        if self.aborted or self.channel_deleted or not self.textChannel:
+            log.debug(f"Game {self.id} went away during self picking. Skipping team assignment.")
+            return
 
         if not picking_view.finished:
             await self.textChannel.send(content="Error during team selection. Please reach out for support.")
@@ -270,6 +335,26 @@ class Game:
         if not self.info_message:
             return
         await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
+
+    def abort(self):
+        """Stop any in-progress selection view before the game is torn down.
+
+        `View.stop()` cancels the view's timeout task and resolves its stopped
+        future, so a pending `wait()` returns right away and `on_timeout()` is
+        never dispatched against a channel that is about to be deleted.
+        """
+        self.aborted = True
+        view, self.active_view = self.active_view, None
+        if view is not None and not view.is_finished():
+            log.debug(f"Stopping active view for game {self.id}: {type(view).__name__}")
+            view.stop()
+
+    @property
+    def channel_deleted(self) -> bool:
+        """True if the cached text channel no longer exists in the guild."""
+        if not self.textChannel:
+            return True
+        return self.queue.guild.get_channel(self.textChannel.id) is None
 
     # Team Selection helpers
     async def process_team_selection_method(self, team_selection: GameMode | None = None, force: bool = False):
@@ -393,6 +478,10 @@ class Game:
 
     # Embeds & Emojis
     async def send_game_info(self):
+        if not self.textChannel:
+            log.warning(f"Game {self.id} has no text channel. Unable to send game info.")
+            return
+
         log.debug(f"Game Mode: {self.teamSelection}")
         ts_emoji = utils.get_emoji(SELECTION_MODES.get(self.teamSelection.value))
 
@@ -451,6 +540,10 @@ class Game:
         self.info_message = await self.textChannel.send(embed=embed)
 
     async def post_more_lobby_info(self, helper_role=None, invalid=False):
+        if not self.textChannel:
+            log.warning(f"Game {self.id} has no text channel. Unable to post lobby info.")
+            return
+
         if not helper_role:
             helper_role = self.helper_role
 
@@ -531,6 +624,11 @@ class Game:
     async def post_lobby_info(self):
         if not self.has_lobby_info():
             return
+
+        if not self.textChannel:
+            log.warning(f"Game {self.id} has no text channel. Unable to post lobby info.")
+            return
+
         embed = discord.Embed(
             title=f"{self.queue.name} {self.queue.maxSize} Mans Game Info",
             color=discord.Colour.green(),

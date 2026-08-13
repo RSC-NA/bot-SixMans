@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.enums import Winner
-from sixMans.views import AuthorOnlyView
+from sixMans.views import AuthorOnlyView, safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -23,6 +23,7 @@ class ScoreReportView(discord.ui.View):
         self.answers: dict[discord.Member, Winner] = {}
         self.result = Winner.PENDING
         self.cancelled = False
+        self.msg: discord.Message | None = None
 
         for c in self.captains:
             self.answers[c] = Winner.PENDING
@@ -54,7 +55,7 @@ class ScoreReportView(discord.ui.View):
                 colour=discord.Colour.yellow(),
             )
 
-            await self.msg.edit(embed=embed, view=None)
+            await safe_edit(self.msg, embed=embed, view=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is a game captain"""
@@ -79,7 +80,7 @@ class ScoreReportView(discord.ui.View):
         # Update Embed
         self.answers[interaction.user] = Winner.BLUE
         await self.update_embed()
-        await self.msg.edit(embed=self.embed, view=self)
+        await safe_edit(self.msg, embed=self.embed, view=self)
 
         if not await self.both_captains_reported():
             await interaction.response.defer(thinking=False, ephemeral=True)
@@ -91,7 +92,7 @@ class ScoreReportView(discord.ui.View):
                 description="The captains did not select a winner unanimously. Please try again...",
                 color=discord.Color.red(),
             )
-            await self.msg.edit(embed=embed, view=None)
+            await safe_edit(self.msg, embed=embed, view=None)
             self.stop()
             return
 
@@ -113,7 +114,7 @@ class ScoreReportView(discord.ui.View):
         # Update Embed
         self.answers[interaction.user] = Winner.ORANGE
         await self.update_embed()
-        await self.msg.edit(embed=self.embed, view=self)
+        await safe_edit(self.msg, embed=self.embed, view=self)
 
         if not await self.both_captains_reported():
             await interaction.response.defer(thinking=False, ephemeral=True)
@@ -125,7 +126,7 @@ class ScoreReportView(discord.ui.View):
                 description="The captains did not select a winner unanimously. Please try again...",
                 color=discord.Color.red(),
             )
-            await self.msg.edit(embed=embed, view=None)
+            await safe_edit(self.msg, embed=embed, view=None)
             self.stop()
             return
 
@@ -142,7 +143,7 @@ class ScoreReportView(discord.ui.View):
         # Update Embed
         self.answers[member] = winner
         await self.update_embed()
-        await self.msg.edit(embed=self.embed, view=self)
+        await safe_edit(self.msg, embed=self.embed, view=self)
 
         if not await self.both_captains_reported():
             return
@@ -153,7 +154,7 @@ class ScoreReportView(discord.ui.View):
                 description="The captains did not select a winner unanimously. Please try again...",
                 color=discord.Color.red(),
             )
-            await self.msg.edit(embed=embed, view=None)
+            await safe_edit(self.msg, embed=embed, view=None)
             self.stop()
             return
 
@@ -172,7 +173,7 @@ class ScoreReportView(discord.ui.View):
             description=f"{interaction.user.mention} has cancelled score reporting.",
             color=discord.Color.red(),
         )
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()
 
     async def unanimous_vote(self) -> bool:
@@ -202,7 +203,7 @@ class ScoreReportView(discord.ui.View):
         )
 
         embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()
 
 
@@ -217,6 +218,11 @@ class ForceResultView(AuthorOnlyView):
         self.cancelled = False
 
     async def prompt(self):
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot prompt force report.")
+            self.stop()
+            return
+
         embed = discord.Embed(
             title="Force Report",
             description="Please select the team that won the game.",
@@ -256,7 +262,7 @@ class ForceResultView(AuthorOnlyView):
             description=f"{interaction.user.mention} has cancelled score reporting.",
             color=discord.Color.red(),
         )
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()
 
     async def display_winner(self):
@@ -273,5 +279,5 @@ class ForceResultView(AuthorOnlyView):
                 embed.colour = discord.Color.orange()
 
         embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()

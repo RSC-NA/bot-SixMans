@@ -1,0 +1,29 @@
+{
+  "env": {
+    "VIRTUAL_ENV": "/home/xentrick/dev/bot-SixMans/.venv"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(rg:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git --no-pager diff:*)",
+      "Bash(git log:*)",
+      "Bash(git --no-pager log:*)",
+      "Bash(git status:*)",
+      "Bash(uv run ty check:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff check:*)",
+      "mcp__context7__query-docs",
+      "mcp__postgres",
+      "mcp__chrome-devtools"
+    ]
+  }
+}

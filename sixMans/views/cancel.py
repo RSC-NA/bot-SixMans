@@ -5,7 +5,7 @@ import discord
 
 from sixMans.embeds import GreenEmbed, OrangeEmbed
 from sixMans.enums import CancelVote
-from sixMans.views import AuthorOnlyView, GameOnlyView
+from sixMans.views import AuthorOnlyView, GameOnlyView, safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -36,6 +36,11 @@ class CancelView(GameOnlyView):
             self.votes[p] = CancelVote.WAITING
 
     async def prompt(self):
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot prompt cancel vote.")
+            self.stop()
+            return
+
         embed = await self.create_embed()
         self.msg = await self.channel.send(embed=embed, view=self)
 
@@ -75,12 +80,12 @@ class CancelView(GameOnlyView):
                 description="The game has been forcibly cancelled by a vote.",
             )
             cancel_embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
-            await self.msg.edit(embed=cancel_embed, view=None)
+            await safe_edit(self.msg, embed=cancel_embed, view=None)
             self.stop()
 
         # Update vote
         embed = await self.create_embed()
-        await self.msg.edit(embed=embed, view=self)
+        await safe_edit(self.msg, embed=embed, view=self)
 
     @discord.ui.button(label="Play Out", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -100,12 +105,12 @@ class CancelView(GameOnlyView):
                 title="Vote Failed",
                 description="The vote to cancel this game has failed. Please try again if this was a mistake.",
             )
-            await self.msg.edit(embed=play_embed, view=None)
+            await safe_edit(self.msg, embed=play_embed, view=None)
             self.stop()
 
         # Update vote
         embed = await self.create_embed()
-        await self.msg.edit(embed=embed, view=self)
+        await safe_edit(self.msg, embed=embed, view=self)
 
 
 class ForceCancelView(AuthorOnlyView):
@@ -118,6 +123,11 @@ class ForceCancelView(AuthorOnlyView):
         self.result = False
 
     async def prompt(self):
+        if not self.channel:
+            log.error(f"No text channel found for game {self.game.id}. Cannot prompt force cancel.")
+            self.stop()
+            return
+
         embed = discord.Embed(
             title="Force Cancel Game",
             description="Are you sure you want to cancel the game?",
@@ -137,7 +147,7 @@ class ForceCancelView(AuthorOnlyView):
             color=discord.Color.green(),
         )
         embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
@@ -151,5 +161,5 @@ class ForceCancelView(AuthorOnlyView):
             description="You have opted to not cancel this game. Please try again if this was a mistake.",
             color=discord.Color.red(),
         )
-        await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
         self.stop()

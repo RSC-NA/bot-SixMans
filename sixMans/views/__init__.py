@@ -9,6 +9,24 @@ if TYPE_CHECKING:
 log = logging.getLogger("red.sixMans.views")
 
 
+async def safe_edit(msg: discord.Message | None, **kwargs) -> None:
+    """Edit a message, tolerating a deleted message or channel.
+
+    Game channels are deleted when a game is cancelled or finished, so a view
+    that is still alive can end up editing a message that no longer exists.
+    discord.py dispatches `View.on_timeout()` in a bare task, meaning anything
+    raised there surfaces as "Task exception was never retrieved" instead of
+    being handled. `discord.NotFound` and `discord.Forbidden` both subclass
+    `discord.HTTPException`, so one clause covers all of them.
+    """
+    if msg is None:
+        return
+    try:
+        await msg.edit(**kwargs)
+    except discord.HTTPException as exc:
+        log.warning(f"Unable to edit message {msg.id}: {exc}")
+
+
 class AuthorOnlyView(discord.ui.View):
     """View class designed to only interact with the interaction author"""
 
@@ -16,18 +34,17 @@ class AuthorOnlyView(discord.ui.View):
         super().__init__()
         self.timeout = timeout
         self.author = author
-        self.msg: discord.Message
+        self.msg: discord.Message | None = None
 
     async def on_timeout(self):
         """Display time out message if we have reference to original"""
-        if self.msg:
-            embed = discord.Embed(
-                title="Time out",
-                description=f"{self.author.mention} Sorry, you didn't respond quick enough. Please try again.",
-                colour=discord.Colour.orange(),
-            )
+        embed = discord.Embed(
+            title="Time out",
+            description=f"{self.author.mention} Sorry, you didn't respond quick enough. Please try again.",
+            colour=discord.Colour.orange(),
+        )
 
-            await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is the author. Allow or deny callbacks"""
@@ -43,18 +60,17 @@ class GameOnlyView(discord.ui.View):
         super().__init__()
         self.timeout = timeout
         self.game = game
-        self.msg: discord.Message
+        self.msg: discord.Message | None = None
 
     async def on_timeout(self):
         """Display time out message if we have reference to original"""
-        if self.msg:
-            embed = discord.Embed(
-                title="Cancel Game",
-                description="Game cancel vote has timed out. Please try again.",
-                colour=discord.Colour.yellow(),
-            )
+        embed = discord.Embed(
+            title="Cancel Game",
+            description="Game cancel vote has timed out. Please try again.",
+            colour=discord.Colour.yellow(),
+        )
 
-            await self.msg.edit(embed=embed, view=None)
+        await safe_edit(self.msg, embed=embed, view=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is the author. Allow or deny callbacks"""

@@ -16,6 +16,7 @@ from sixMans.embeds import (
     ExceptionErrorEmbed,
     QueueNotFoundEmbed,
     SuccessEmbed,
+    WarningEmbed,
 )
 from sixMans.enums import GameMode, GameState, Winner
 from sixMans.game import Game
@@ -23,7 +24,7 @@ from sixMans.models.game import GameData
 from sixMans.models.queue import QueueData
 from sixMans.queue import SixMansQueue
 from sixMans.strings import Strings
-from sixMans.types import PlayerScore, PlayerStats, SixMansConfig, QueueBan
+from sixMans.types import PlayerScore, PlayerStats, QueueBan, SixMansConfig
 from sixMans.views.cancel import CancelView, ForceCancelView
 from sixMans.views.score import ForceResultView, ScoreReportView
 
@@ -68,6 +69,8 @@ class SixMans(commands.Cog):
         self.queues_enabled: dict[discord.Guild, bool] = {}
 
         self.timeout_tasks = {}
+        # Strong refs to detached game tasks so they aren't GC'd mid-flight
+        self._background_tasks: set[asyncio.Task] = set()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -92,7 +95,7 @@ class SixMans(commands.Cog):
                 timeout_task.cancel()
         for guild in self.bot.guilds:
             log.info(f"[{guild.name}] Saving games")
-            await self._save_games(guild, self.games[guild])
+            await self._save_games(guild, self.games.get(guild, []))
 
     # region listeners
     @commands.Cog.listener("on_guild_channel_delete")
@@ -105,6 +108,16 @@ class SixMans(commands.Cog):
         # TODO: Error catch if Q Lobby VC is deleted
         if not isinstance(channel, discord.TextChannel):
             return
+
+        # A game's own channel being deleted out of band leaves its selection
+        # view alive and pointed at a channel that no longer exists.
+        for game in self.games.get(channel.guild, []):
+            if game.textChannel and game.textChannel.id == channel.id:
+                log.warning(f"Game channel for {game.id} was deleted. Aborting team selection.")
+                game.abort()
+                game.textChannel = None
+                break
+
         queue = None
 
         for q in self.queues[channel.guild]:
@@ -126,6 +139,28 @@ class SixMans(commands.Cog):
         await clone.send(f":grey_exclamation:{helper_ping} This channel has been created because the last textChannel for the **{queue.name}** queue has been deleted.")
         queue.channels.append(clone)
         await self._save_queues(channel.guild, self.queues[channel.guild])
+
+    @commands.Cog.listener("on_member_remove")
+    async def on_member_remove(self, member: discord.Member):
+        """Remove a departing member from any queue they're waiting in.
+
+        A member who has left can't be given channel permission overwrites, which would otherwise
+        break game creation when the queue pops.
+        """
+        for queue in self.queues.get(member.guild, []):
+            if member in queue.queue:
+                log.info(f"[{member.guild.name}] Removing {member.id} from the {queue.name} queue. They left the server.")
+                await self._remove_from_queue(member, queue)
+
+        for game in self.games.get(member.guild, []):
+            if member not in game or not game.textChannel:
+                continue
+
+            log.info(f"[{member.guild.name}] {member.id} left the server during game {game.id}.")
+            helper_role = await self._helper_role(member.guild)
+            helper_ping = f" {helper_role.mention}" if helper_role else ""
+            with contextlib.suppress(discord.HTTPException, discord.Forbidden, discord.NotFound):
+                await game.textChannel.send(f":warning:{helper_ping} **{member.display_name}** has left the server. This game may need to be cancelled with `{game.prefix}fcg`.")
 
     # endregion
 
@@ -522,7 +557,7 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        banned = self.check_banned(ctx.guild, player)
+        banned = await self.check_banned(ctx.guild, player)
         if banned:
             await self._remove_queue_ban(ctx.guild, player.id)
             await ctx.send(f":white_check_mark: {player.mention} has been unbanned from queueing.")
@@ -699,10 +734,14 @@ class SixMans(commands.Cog):
             if not game:
                 return await ctx.send(embed=ErrorEmbed(description="No active game in this channel."))
 
+        if not game.textChannel:
+            return await ctx.send(embed=ErrorEmbed(description=f"Game **{game.id}** no longer has a text channel."))
+
         await game.textChannel.send(f"Processing Forced Team Selection: {mode}")
         await game.process_team_selection_method(team_selection=mode, force=True)
 
     @commands.guild_only()
+    @commands.max_concurrency(1, commands.BucketType.channel, wait=False)
     @commands.command(aliases=["fcg"])
     async def forceCancelGame(self, ctx: Context, gameId: int | None = None):
         """Cancel the current game. Can only be used in a game channel unless a gameId is given.
@@ -739,10 +778,16 @@ class SixMans(commands.Cog):
         if not cancel_view.result:
             return
 
+        live_game = self.revalidate_game(ctx.guild, game)
+        if live_game is None:
+            return await ctx.send(embed=ErrorEmbed(description="This game is no longer active."))
+        game = live_game
+
         game.state = GameState.CANCELLED
         await self._remove_game(ctx.guild, game)
 
     @commands.guild_only()
+    @commands.max_concurrency(1, commands.BucketType.channel, wait=False)
     @commands.command(aliases=["fr"])
     async def forceResult(self, ctx: Context):
         if not ctx.guild:
@@ -768,6 +813,11 @@ class SixMans(commands.Cog):
 
         if report_view.result == Winner.PENDING:
             return await ctx.send(embed=ErrorEmbed(description="Error reporting game result. Winner was not selected. Please reach out for support."))
+
+        live_game = self.revalidate_game(ctx.guild, game)
+        if live_game is None:
+            return await ctx.send(embed=ErrorEmbed(description="This game is no longer active. The score was not recorded."))
+        game = live_game
 
         await game.report_winner(report_view.result)
         await self._finish_game(ctx.guild, game, six_mans_queue, report_view.result)
@@ -897,6 +947,7 @@ class SixMans(commands.Cog):
         await self._remove_from_queue(player, six_mans_queue)
 
     @commands.guild_only()
+    @commands.max_concurrency(1, commands.BucketType.channel, wait=False)
     @commands.command(aliases=["cg"])
     async def cancelGame(self, ctx: Context):
         """Cancel the current game. Can only be used in a game channel.
@@ -923,9 +974,16 @@ class SixMans(commands.Cog):
         if not cancel_view.result:
             return
 
+        live_game = self.revalidate_game(ctx.guild, game)
+        if live_game is None:
+            return await ctx.send(embed=ErrorEmbed(description="This game is no longer active."))
+        game = live_game
+
+        game.state = GameState.CANCELLED
         await self._remove_game(ctx.guild, game)
 
     @commands.guild_only()
+    @commands.max_concurrency(1, commands.BucketType.channel, wait=False)
     @commands.command(aliases=["sr", "reportScore"])
     async def scoreReport(self, ctx: Context):
         """Report which team won the series. Can only be used in a game channel.
@@ -972,6 +1030,21 @@ class SixMans(commands.Cog):
 
         if report_view.cancelled:
             return
+
+        # The prompt above can block for two minutes. Re-fetch before scoring: the game may have
+        # been cancelled, reported by a competing prompt, or replaced by a reload in that window.
+        live_game = self.revalidate_game(ctx.guild, game)
+        if live_game is None:
+            return await ctx.send(embed=ErrorEmbed(description="This game is no longer active. The score was not recorded."))
+        game = live_game
+
+        if game.winner != Winner.PENDING:
+            return await ctx.send(
+                embed=BlueEmbed(
+                    title="Already Reported",
+                    description=f"The game result has already been reported.\n\nWinner: {game.winner}",
+                )
+            )
 
         winner = report_view.result
         log.debug(f"Game Winner: {winner}")
@@ -1181,13 +1254,12 @@ class SixMans(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             return
 
-        queue = None
-        if queue_name:
-            queue = self.get_queue_by_name(ctx.guild, queue_name)
+        queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
+        if queue:
             players = queue.players
         else:
             players = await self._players(ctx.guild)
-            queue_name = ctx.guild.name
+        queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
             await ctx.send(f":x: Player ranks not available for {queue_name}")
@@ -1608,7 +1680,7 @@ class SixMans(commands.Cog):
         now = datetime.datetime.now(datetime.timezone.utc).timestamp()
         expired = [pid for pid, ban in bans.items() if ban["expires"] <= now]
         for pid in expired:
-            await self._remove_queue_ban(guild, pid)
+            await self._remove_queue_ban(guild, int(pid))
 
     async def has_perms(self, member: discord.Member):
         # Admins
@@ -1641,6 +1713,13 @@ class SixMans(commands.Cog):
             six_mans_queue._remove(player)
         embed = self.embed_player_removed(player, six_mans_queue)
         await six_mans_queue.send_message(embed=embed)
+
+        # Don't leave the timeout task sleeping for the rest of its duration. `_auto_remove_from_queue`
+        # calls this from inside its own timeout task, which must not cancel itself.
+        task = self.timeout_tasks.get(player, {}).get(six_mans_queue)
+        if task and task is not asyncio.current_task():
+            task.cancel()
+
         await self.remove_timeout_task(player, six_mans_queue)
 
     async def get_visble_queue_channel(self, six_mans_queue: SixMansQueue, player: discord.Member):
@@ -1709,6 +1788,24 @@ class SixMans(commands.Cog):
         six_mans_queue: SixMansQueue,
         winning_team: Winner,
     ):
+        # Scoring is not idempotent: every call inserts a fresh score row per player and bumps
+        # GamesPlayed. Two reports racing for the same game (two `!sr` prompts, or `!sr` against
+        # `!fr`) would silently double credit everyone, so only the call that still sees the game
+        # in the active list is allowed through.
+        live = self.get_game_by_id(guild, game.id)
+        if live is None:
+            log.warning(f"[{guild.name}] Refusing to finish game {game.id}. It is no longer an active game.")
+            return
+        if live is not game:
+            log.info(f"[{guild.name}] Game {game.id} was reloaded mid-report. Scoring the live object.")
+            game = live
+
+        # `_load_queues()` also rebuilds queue objects, so the caller may be holding one that is no
+        # longer the object `_save_queues` persists. Re-resolve by id or the win would be dropped.
+        live_queue = next((q for q in self.queues.get(guild, []) if q.id == six_mans_queue.id), None)
+        if live_queue is not None:
+            six_mans_queue = live_queue
+
         winning_players: set[discord.Member] = set()
         losing_players: set[discord.Member] = set()
         match winning_team:
@@ -1763,9 +1860,33 @@ class SixMans(commands.Cog):
                 await member.move_to(vc)
 
     async def _remove_game(self, guild: discord.Guild, game: Game):
-        """Remove game from active games and delete channels."""
-        with contextlib.suppress(ValueError):
-            self.games[guild].remove(game)
+        """Remove game from active games and delete channels.
+
+        Removal is keyed on `game.id` rather than object identity. `Game` defines no `__eq__`, and
+        `_load_games()` rebuilds every `Game` from config on reconnect, so a command that captured a
+        reference before an `await` can easily be holding an object that is no longer the one in
+        `self.games[guild]`. Matching on id removes the live entry instead of raising.
+
+        Also idempotent: if no active game carries this id, the teardown is already done (or in
+        flight) and we return without repeating the 30 second sleep and channel deletes.
+        """
+        # Unblock and disarm any pending selection view before its channel goes
+        # away. Done first so a coroutine parked in `view.wait()` resumes now
+        # rather than after the sleep below -- or, for the untimed captains and
+        # self-pick views, rather than never.
+        game.abort()
+
+        active = self.games.setdefault(guild, [])
+        live = next((g for g in active if g.id == game.id), None)
+        if live is None:
+            log.warning(f"[{guild.name}] Game {game.id} is not in active games. Nothing to remove.")
+            return
+
+        if live is not game:
+            log.info(f"[{guild.name}] Game {game.id} was reloaded since it was fetched. Tearing down the live object.")
+            live.abort()
+
+        self.games[guild] = [g for g in active if g.id != game.id]
         await self._save_games(guild, self.games[guild])
 
         # Sleep before removal
@@ -1773,14 +1894,18 @@ class SixMans(commands.Cog):
         q_lobby_vc = await self._get_q_lobby_vc(guild)
 
         # Delete game text channel
-        if game.textChannel:
+        text_channel = live.textChannel or game.textChannel
+        if text_channel:
             try:
-                await game.textChannel.delete()
+                await text_channel.delete()
+            except discord.NotFound:
+                log.debug(f"Game channel {text_channel} was already deleted.")
             except Exception as exc:
-                log.exception(f"Error deleting game channel {game.textChannel}", exc_info=exc)
-                raise
+                log.exception(f"Error deleting game channel {text_channel}", exc_info=exc)
+            live.textChannel = None
+            game.textChannel = None
 
-        for vc in game.voiceChannels:
+        for vc in live.voiceChannels or game.voiceChannels:
             # move players in game VC to general lobby VC
             if q_lobby_vc:
                 with contextlib.suppress(
@@ -1794,9 +1919,13 @@ class SixMans(commands.Cog):
             # Delete game VC
             try:
                 await vc.delete()
-            except (discord.Forbidden, discord.NotFound, discord.HTTPException) as exc:
+            except discord.NotFound:
+                log.debug(f"Game voice channel {vc.name} was already deleted.")
+            except (discord.Forbidden, discord.HTTPException) as exc:
                 log.exception(f"Error deleting game voice channel {vc.name}", exc_info=exc)
-                raise
+
+        live.voiceChannels = []
+        game.voiceChannels = []
 
     def _get_opposing_captain(self, player: discord.Member, game: Game):
         opposing_captain = None
@@ -1894,9 +2023,46 @@ class SixMans(commands.Cog):
 
         return True
 
+    async def _get_departed_players(self, guild: discord.Guild, six_mans_queue: SixMansQueue) -> list[discord.Member]:
+        """Return the players at the front of the queue who are no longer in the guild."""
+        departed: list[discord.Member] = []
+        for player in six_mans_queue._peek(six_mans_queue.maxSize):
+            if guild.get_member(player.id):
+                continue
+
+            # Cache miss. Confirm against the API before removing anyone, otherwise a cold member
+            # cache would make every player look like they had left the server.
+            try:
+                await guild.fetch_member(player.id)
+            except discord.NotFound:
+                departed.append(player)
+            except (discord.HTTPException, discord.Forbidden) as exc:
+                log.warning(f"[{guild.name}] Unable to verify whether {player.id} is still in the guild.", exc_info=exc)
+
+        return departed
+
     async def create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue, prefix="?"):
         if not six_mans_queue.queue_full():
             return None
+
+        # Players sit in the queue as Member objects for up to PLAYER_TIMEOUT_TIME. Anyone who left
+        # the guild while waiting can no longer be given channel permission overwrites (Discord
+        # returns 404 Unknown Overwrite), so drop them before the queue is popped.
+        missing = await self._get_departed_players(guild, six_mans_queue)
+        if missing:
+            log.warning(f"[{guild.name}] Removing players no longer in the guild from the {six_mans_queue.name} queue: {[p.id for p in missing]}")
+            for player in missing:
+                await self._remove_from_queue(player, six_mans_queue)
+
+            names = ", ".join(player.display_name for player in missing)
+            verb = "are" if len(missing) > 1 else "is"
+            description = (
+                f"**{names}** {verb} no longer in the server and cannot be added to a game.\n\n"
+                f"The **{six_mans_queue.name}** queue is now at **{six_mans_queue.queue.qsize()}/{six_mans_queue.maxSize}**."
+            )
+            await six_mans_queue.send_message(embed=WarningEmbed(title="Queue Not Popped", description=description))
+            return None
+
         players = [six_mans_queue._get() for _ in range(six_mans_queue.maxSize)]
 
         await six_mans_queue.send_message(message="**Queue is full! Game is being created.**")
@@ -1909,7 +2075,21 @@ class SixMans(commands.Cog):
             prefix=prefix,
             save_callback=lambda: self._save_games(guild, self.games[guild]),
         )
-        await game.create_game_channels(await self._category(guild))
+        try:
+            await game.create_game_channels(await self._category(guild))
+        except (discord.HTTPException, discord.Forbidden) as exc:
+            log.exception(f"[{guild.name}] Error creating game channels for queue: {six_mans_queue.name}", exc_info=exc)
+            # Put everyone back in the queue in their original order. `_get()` never touched their
+            # timeout tasks, so those are still running and must not be recreated here.
+            for player in players:
+                six_mans_queue._put(player)
+            await six_mans_queue.send_message(
+                embed=ErrorEmbed(
+                    title="Game Creation Failed",
+                    description="Something went wrong while creating the game channels. Everyone has been returned to the queue.",
+                )
+            )
+            return None
 
         log.debug(f"Saving game: {game.id} Players: {game.players}")
         self.games[guild].append(game)
@@ -1955,10 +2135,27 @@ class SixMans(commands.Cog):
 
     def get_game_by_id(self, guild: discord.Guild, game_id: int) -> Game | None:
         log.debug(f"Fetching Game ID: {game_id}")
-        for active_game in self.games[guild]:
+        for active_game in self.games.get(guild, []):
             if active_game.id == game_id:
                 return active_game
         return None
+
+    def revalidate_game(self, guild: discord.Guild, game: Game) -> Game | None:
+        """Re-fetch a game after awaiting on a view.
+
+        Commands hold a `Game` reference across a prompt that can block for minutes. In that window
+        the game may have been cancelled, finished by a competing report, or replaced wholesale by
+        `_load_games()`. Returns the live object for this game id, or `None` if it is gone or
+        already finished.
+        """
+        live = self.get_game_by_id(guild, game.id)
+        if live is None:
+            log.info(f"[{guild.name}] Game {game.id} is no longer active.")
+            return None
+        if live.state in (GameState.COMPLETE, GameState.CANCELLED):
+            log.info(f"[{guild.name}] Game {game.id} is already {live.state}.")
+            return None
+        return live
 
     def get_game_by_text_channel(self, channel: discord.TextChannel) -> Game | None:
         log.debug(f"Games: {self.games}")
@@ -2203,7 +2400,7 @@ class SixMans(commands.Cog):
         for guild in self.bot.guilds:
             log.debug(f"Preloading data for guild: {guild}")
             self.queues[guild] = []
-            self.games[guild] = []
+            self.games.setdefault(guild, [])
 
             # Defaults
             self.queueMaxSize[guild] = await self._get_queue_max_size(guild)
@@ -2222,12 +2419,11 @@ class SixMans(commands.Cog):
         log.info("Preloading existing queues...")
         # await self.bot.wait_until_ready()
         self.queues = {}
-        self.games = {}
 
         for guild in self.bot.guilds:
             log.debug(f"Getting queues for guild: {guild}")
             self.queues[guild] = []
-            self.games[guild] = []
+            self.games.setdefault(guild, [])
 
             # Queue settings
             default_team_selection = await self._team_selection(guild)
@@ -2297,12 +2493,20 @@ class SixMans(commands.Cog):
                     self.queues[guild].append(six_mans_queue)
 
     async def _load_games(self):
+        """Load persisted games into memory, keeping any `Game` objects already there.
+
+        This runs from `cog_load()` but also from the `on_ready` listener, which fires on every
+        gateway IDENTIFY -- i.e. after any reconnect, not just at startup. Rebuilding every `Game`
+        unconditionally would invalidate references held by commands that are parked in a view's
+        `wait()`, so games already in memory are reused by id and only genuinely new ids are
+        constructed.
+        """
         log.info("Preloading existing games...")
-        self.games = {}
 
         for guild in self.bot.guilds:
             log.debug(f"Getting games for guild: {guild}")
-            self.games[guild] = []
+            existing = {g.id: g for g in self.games.get(guild, [])}
+            self.games.setdefault(guild, [])
 
             # Pre-load Games
             games = await self._games(guild)
@@ -2333,6 +2537,21 @@ class SixMans(commands.Cog):
 
                 if not queue:
                     log.error(f"Unable to find queue associated with ID: {queueId}")
+                    continue
+
+                # A game whose channel is gone cannot be resumed -- restarting
+                # team selection for it would only crash in a detached task.
+                if not text_channel:
+                    log.warning(f"Dropping game {key}. Its text channel no longer exists.")
+                    continue
+
+                known = existing.get(int(key))
+                if known is not None:
+                    log.debug(f"Game {key} is already loaded. Reusing the in-memory object.")
+                    # `_load_queues()` rebuilt the queue objects, so the reused game would
+                    # otherwise keep scoring against a SixMansQueue that is no longer saved.
+                    known.queue = queue
+                    game_list.append(known)
                     continue
 
                 log.debug(f"Loading Game: {key}")
@@ -2368,12 +2587,35 @@ class SixMans(commands.Cog):
             self.games[guild] = game_list
             await self._save_games(guild, self.games[guild])
 
-            # Start games again if needed.
+            # Start games again if needed. Games that were already in memory have a selection or
+            # info task in flight already -- respawning would give them a second one.
             for eg in self.games[guild]:
+                if eg.id in existing:
+                    continue
                 if eg.state == GameState.NEW or eg.state == GameState.SELECTION:
-                    asyncio.create_task(eg.process_team_selection_method())
+                    self._spawn_game_task(eg.process_team_selection_method(), eg)
                 elif eg.state == GameState.ONGOING:
-                    asyncio.create_task(eg.send_game_info())
+                    self._spawn_game_task(eg.send_game_info(), eg)
+
+    def _spawn_game_task(self, coro, game: Game):
+        """Run a game coroutine detached, logging failures instead of dropping them.
+
+        A bare `asyncio.create_task` leaves any exception unretrieved, which
+        surfaces only as an asyncio warning with no context about the game.
+        """
+
+        def _log_result(task: asyncio.Task):
+            if task.cancelled():
+                return
+            exc = task.exception()
+            if exc:
+                log.exception(f"Background task failed for game {game.id}", exc_info=exc)
+
+        task = asyncio.create_task(coro)
+        task.add_done_callback(_log_result)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     async def _clear_all_data(self, guild: discord.Guild):
         await self._save_games(guild, [])

@@ -13,7 +13,6 @@ from sixMans.views.score import ScoreReportView
 
 from .conftest import make_interaction
 
-
 # ---------------------------------------------------------------------------
 # Helpers — discord.ui.button decorator wraps methods as Button objects,
 # so we need to call .callback(interaction) to invoke them in tests.
@@ -45,10 +44,7 @@ async def test_result_set_after_unanimous_blue(game, captains):
     i2 = make_interaction(captains[1])
     await vote_blue(view, i2)
 
-    assert view.result == Winner.BLUE, (
-        f"Expected result=BLUE but got {view.result!r}. "
-        "display_winner() must set self.result, not just self.winner."
-    )
+    assert view.result == Winner.BLUE, f"Expected result=BLUE but got {view.result!r}. display_winner() must set self.result, not just self.winner."
 
 
 @pytest.mark.asyncio
@@ -78,23 +74,17 @@ async def test_already_answered_checks_specific_member(game, captains):
     await view.prompt()
 
     # Captain 0 has NOT voted yet
-    assert not await view.already_answered(captains[0]), (
-        "Captain 0 hasn't voted yet, already_answered should be False"
-    )
+    assert not await view.already_answered(captains[0]), "Captain 0 hasn't voted yet, already_answered should be False"
 
     # Captain 0 votes
     i1 = make_interaction(captains[0])
     await vote_blue(view, i1)
 
     # Captain 0 HAS voted
-    assert await view.already_answered(captains[0]), (
-        "Captain 0 has voted, already_answered should be True"
-    )
+    assert await view.already_answered(captains[0]), "Captain 0 has voted, already_answered should be True"
 
     # Captain 1 has NOT voted — should still be False
-    assert not await view.already_answered(captains[1]), (
-        "Captain 1 hasn't voted yet, already_answered should be False"
-    )
+    assert not await view.already_answered(captains[1]), "Captain 1 hasn't voted yet, already_answered should be False"
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +111,4 @@ async def test_non_unanimous_does_not_call_display_winner(game, captains):
     await vote_orange(view, i2)
 
     # display_winner sets self.winner — it should NOT have been called
-    assert not hasattr(view, "winner"), (
-        "display_winner() was called after non-unanimous vote. "
-        "The non-unanimous branch must return early."
-    )
+    assert not hasattr(view, "winner"), "display_winner() was called after non-unanimous vote. The non-unanimous branch must return early."

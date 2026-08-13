@@ -1,8 +1,10 @@
 import struct
+from collections.abc import Collection
+
 import discord
 
 
-def format_team_mentions(team: list[discord.Member], captains: list[discord.Member]) -> str:
+def format_team_mentions(team: Collection[discord.Member], captains: Collection[discord.Member]) -> str:
     captain_players = [f"{player.mention} (C)" for player in team if player in captains]
     non_captains = [player.mention for player in team if player not in captains]
     ordered_players = captain_players + non_captains

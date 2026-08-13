@@ -1,10 +1,10 @@
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
+
 import discord
+import pytest
 
 from sixMans.sixMans import SixMans
-
 
 # Helpers to build mock objects
 
@@ -23,8 +23,8 @@ def make_member(member_id=100, guild=None, display_name="TestPlayer"):
     member.mention = f"<@{member_id}>"
     member.guild = guild
     member.send = AsyncMock()
-    member.__eq__ = lambda self, other: isinstance(other, MagicMock) and self.id == other.id
-    member.__hash__ = lambda self: hash(self.id)
+    member.__eq__ = lambda self, other: isinstance(other, MagicMock) and self.id == other.id  # ty: ignore[invalid-assignment]
+    member.__hash__ = lambda self: hash(self.id)  # ty: ignore[invalid-assignment]
     return member
 
 
@@ -59,7 +59,8 @@ def make_ctx(guild, author, channel=None):
     ctx.author = author
     ctx.message = MagicMock()
     ctx.message.author = author
-    ctx.message.channel = channel or MagicMock()
+    # The queue command type-checks the channel, so it needs a real spec
+    ctx.message.channel = channel or MagicMock(spec=discord.TextChannel)
     ctx.channel = channel or ctx.message.channel
     ctx.send = AsyncMock()
     return ctx
@@ -133,14 +134,13 @@ class TestBanCheckInQueue:
         q = make_queue_empty()
         q.textChannel = ctx.channel
         cog.queues[guild] = [q]
-        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+        cog.get_queue_by_text_channel = MagicMock(return_value=q)
 
         await cog.queue.callback(cog, ctx)
 
         ctx.send.assert_called_once()
         msg = ctx.send.call_args[0][0]
         assert ":x: You are banned from queueing" in msg
-        assert "toxicity" in msg
 
     @pytest.mark.asyncio
     async def test_expired_ban_allows_queue(self, cog, guild):
@@ -161,10 +161,10 @@ class TestBanCheckInQueue:
         q = make_queue_empty()
         q.textChannel = ctx.channel
         q.queue.queue = []
-        q._queue_full = MagicMock(return_value=False)
+        q.queue_full = MagicMock(return_value=False)
         cog.queues[guild] = [q]
         cog.games[guild] = []
-        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+        cog.get_queue_by_text_channel = MagicMock(return_value=q)
 
         await cog.queue.callback(cog, ctx)
 
@@ -174,8 +174,8 @@ class TestBanCheckInQueue:
         cog.config.guild(guild).QueueBans.set.assert_called()
 
     @pytest.mark.asyncio
-    async def test_ban_message_includes_reason(self, cog, guild):
-        """The ban message should include the reason when one is provided."""
+    async def test_ban_message_omits_reason(self, cog, guild):
+        """The ban reason is staff-only and must not be shown in the public queue channel."""
         player = make_member(100, guild)
         future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
 
@@ -193,12 +193,12 @@ class TestBanCheckInQueue:
 
         ctx = make_ctx(guild, player)
         q = make_queue_empty()
-        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+        cog.get_queue_by_text_channel = MagicMock(return_value=q)
 
         await cog.queue.callback(cog, ctx)
 
         msg = ctx.send.call_args[0][0]
-        assert "toxicity" in msg
+        assert "toxicity" not in msg
 
     @pytest.mark.asyncio
     async def test_ban_message_no_reason(self, cog, guild):
@@ -220,7 +220,7 @@ class TestBanCheckInQueue:
 
         ctx = make_ctx(guild, player)
         q = make_queue_empty()
-        cog._get_queue_by_text_channel = MagicMock(return_value=q)
+        cog.get_queue_by_text_channel = MagicMock(return_value=q)
 
         await cog.queue.callback(cog, ctx)
 
