@@ -71,6 +71,9 @@ class Game:
         # rebuilds through `__init__`, so these always start clean.
         self.active_view: discord.ui.View | None = None
         self.aborted: bool = False
+        # Bumped each time team selection starts. A selection parked in a view
+        # compares against it after `wait()` to learn it was replaced by `fts`.
+        self.selection_round: int = 0
 
         # Core
         self.id = id or uuid.uuid4().int
@@ -203,6 +206,7 @@ class Game:
     # Team Selection
     async def vote_team_selection(self):
         """Start a vote for game mode."""
+        selection_round = self.selection_round
         vote_view = GameModeVote(self)
         self.active_view = vote_view
         try:
@@ -214,6 +218,10 @@ class Game:
 
         if self.aborted or self.channel_deleted or not self.textChannel:
             log.debug(f"Game {self.id} went away during the game mode vote. Skipping team selection.")
+            return
+
+        if selection_round != self.selection_round:
+            log.debug(f"Game {self.id} team selection was restarted during the game mode vote.")
             return
 
         # discord.py resolves `wait()` before it runs `on_timeout()`, so the result is not set yet
@@ -254,6 +262,7 @@ class Game:
     async def captains_pick_teams(self):
         """Initiate Captains Game Mode"""
         log.debug(f"Game Players: {type(self.players)}\n{pformat([f'{p.id}: {p.name}' for p in self.players])}")
+        selection_round = self.selection_round
         captains_view = CaptainsView(self)
         self.active_view = captains_view
         try:
@@ -265,6 +274,10 @@ class Game:
 
         if self.aborted or self.channel_deleted or not self.textChannel:
             log.debug(f"Game {self.id} went away during captains selection. Skipping team assignment.")
+            return
+
+        if selection_round != self.selection_round:
+            log.debug(f"Game {self.id} team selection was restarted during captains selection.")
             return
 
         if not captains_view.finished:
@@ -295,6 +308,7 @@ class Game:
         self.state = GameState.ONGOING
 
     async def self_picking_teams(self):
+        selection_round = self.selection_round
         picking_view = SelfPickingView(game=self, helper=self.helper_role)
         self.active_view = picking_view
         try:
@@ -306,6 +320,10 @@ class Game:
 
         if self.aborted or self.channel_deleted or not self.textChannel:
             log.debug(f"Game {self.id} went away during self picking. Skipping team assignment.")
+            return
+
+        if selection_round != self.selection_round:
+            log.debug(f"Game {self.id} team selection was restarted during self picking.")
             return
 
         if not picking_view.finished:
@@ -349,6 +367,9 @@ class Game:
         never dispatched against a channel that is about to be deleted.
         """
         self.aborted = True
+        self._stop_active_view()
+
+    def _stop_active_view(self):
         view, self.active_view = self.active_view, None
         if view is not None and not view.is_finished():
             log.debug(f"Stopping active view for game {self.id}: {type(view).__name__}")
@@ -371,6 +392,12 @@ class Game:
 
         if team_selection:
             self.teamSelection = team_selection
+
+        # A forced restart (`fts`) can arrive while an earlier selection is still waiting on its
+        # view. Stop that view and start a new round, so the earlier selection returns without
+        # posting an error or assigning teams over this one.
+        self._stop_active_view()
+        self.selection_round += 1
 
         self.state = GameState.SELECTION
         self.full_player_reset()
