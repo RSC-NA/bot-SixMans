@@ -32,7 +32,7 @@ class ScoreReportView(discord.ui.View):
         await self.update_embed()
         captains_mention = " ".join(c.mention for c in self.captains)
         if not self.channel:
-            log.error("No text channel found for game {}. Cannot prompt score report.".format(self.game.id))
+            log.error(f"No text channel found for game {self.game.id}. Cannot prompt score report.")
             return
         self.msg = await self.channel.send(content=captains_mention, embed=self.embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -195,7 +195,7 @@ class ScoreReportView(discord.ui.View):
         return all(v != Winner.PENDING for v in self.answers.values())
 
     async def display_winner(self):
-        self.result = list(self.answers.values())[0]
+        self.result = next(iter(self.answers.values()))
         embed = discord.Embed(
             title="Game Finished",
             description=f"**{self.result}** has been recorded as the winner of this game. Thanks for playing!",

@@ -116,7 +116,7 @@ class TestBanCheckInQueue:
     async def test_active_ban_blocks_queue(self, cog, guild):
         """A player with an active ban should be blocked from queueing."""
         player = make_member(100, guild)
-        future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
+        future_ts = datetime.datetime.now(datetime.UTC).timestamp() + 3600
 
         set_bans(
             cog,
@@ -146,7 +146,7 @@ class TestBanCheckInQueue:
     async def test_expired_ban_allows_queue(self, cog, guild):
         """A player whose ban has expired should have it cleaned up."""
         player = make_member(100, guild)
-        past_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() - 3600
+        past_ts = datetime.datetime.now(datetime.UTC).timestamp() - 3600
 
         bans_dict = {
             str(player.id): {
@@ -177,7 +177,7 @@ class TestBanCheckInQueue:
     async def test_ban_message_omits_reason(self, cog, guild):
         """The ban reason is staff-only and must not be shown in the public queue channel."""
         player = make_member(100, guild)
-        future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
+        future_ts = datetime.datetime.now(datetime.UTC).timestamp() + 3600
 
         set_bans(
             cog,
@@ -204,7 +204,7 @@ class TestBanCheckInQueue:
     async def test_ban_message_no_reason(self, cog, guild):
         """The ban message should not include a reason line when none is provided."""
         player = make_member(100, guild)
-        future_ts = datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600
+        future_ts = datetime.datetime.now(datetime.UTC).timestamp() + 3600
 
         set_bans(
             cog,
@@ -257,9 +257,9 @@ class TestQueueBanCommand:
         admin = make_member(999, guild)
         ctx = make_ctx(guild, admin)
 
-        before = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        before = datetime.datetime.now(datetime.UTC).timestamp()
         await cog.queueBan.callback(cog, ctx, player, 30, reason="test")
-        after = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        after = datetime.datetime.now(datetime.UTC).timestamp()
 
         set_call = cog.config.guild(guild).QueueBans.set
         set_call.assert_called_once()
@@ -351,7 +351,7 @@ class TestQueueUnbanCommand:
         admin = make_member(999, guild)
         bans_dict = {
             str(player.id): {
-                "expires": datetime.datetime.now(datetime.timezone.utc).timestamp() + 3600,
+                "expires": datetime.datetime.now(datetime.UTC).timestamp() + 3600,
                 "reason": "test",
                 "banned_by": 999,
             }
@@ -389,7 +389,7 @@ class TestListQueueBansCommand:
     @pytest.mark.asyncio
     async def test_expired_bans_cleaned(self, cog, guild):
         """Expired bans should be cleaned up when listing."""
-        now = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        now = datetime.datetime.now(datetime.UTC).timestamp()
         bans_dict = {
             "100": {"expires": now - 3600, "reason": "expired", "banned_by": 999},
             "200": {"expires": now + 3600, "reason": "active", "banned_by": 999},

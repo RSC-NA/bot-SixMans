@@ -34,7 +34,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "C4", "SIM", "PTH", "TID", "ASYNC"]
+select = ["E", "F", "I", "B", "C4", "SIM", "PTH", "TID", "ASYNC", "UP", "RUF", "PIE", "PERF", "FURB", "LOG", "PT", "T20", "DTZ"]
 ignore = ["B904", "SIM103", "SIM108"]
 
 [tool.codespell]
@@ -42,4 +42,11 @@ ignore-words-list = "alltime"
 
 [dependency-groups]
 # pip is imported by redbot.core.core_commands, which redbot's pytest plugin pulls in at collection.
-dev = ["pytest>=9.0.2", "pytest-asyncio>=1.0", "pip"]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.0",
+    "pip",
+    "ruff>=0.16.3",
+    "ty>=0.0.92",
+    "pre-commit>=4.7.0",
+]

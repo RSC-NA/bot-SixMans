@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+    rev: v0.17.2
     hooks:
       - id: ruff-check
       - id: ruff-format
@@ -18,3 +18,13 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
+
+  # Local so ty runs in the project's uv venv and can resolve redbot/discord imports.
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty check
+        entry: uv run ty check
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false

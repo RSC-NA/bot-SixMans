@@ -16,7 +16,7 @@ class SelfPickingView(discord.ui.View):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=None)
         self.channel: discord.TextChannel | None = game.textChannel
-        self.game: "Game" = game
+        self.game: Game = game
         self.helper: discord.Role | None = helper
         self.players: list[discord.Member] = list(self.game.players)
         self.unplaced: list[discord.Member] = list(self.game.players)

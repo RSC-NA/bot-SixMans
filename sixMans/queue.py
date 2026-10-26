@@ -4,7 +4,6 @@ import itertools
 import logging
 import uuid
 from queue import Queue
-from typing import List
 
 import discord
 
@@ -29,7 +28,7 @@ class SixMansQueue:
         self,
         name: str,
         guild: discord.Guild,
-        channels: List[discord.TextChannel],
+        channels: list[discord.TextChannel],
         points: dict[str, int],
         players: dict[str, PlayerStats],
         gamesPlayed: int,

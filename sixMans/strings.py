@@ -35,7 +35,7 @@ class Strings:
     `{prefix}moreinfo` - get detailed more info"""
 
     # Lobby Info
-    room_pass = [
+    room_pass = (
         "octane",
         "takumi",
         "dominus",
@@ -227,4 +227,4 @@ class Strings:
         "viper",
         "wolfman",
         "yuri",
-    ]
+    )

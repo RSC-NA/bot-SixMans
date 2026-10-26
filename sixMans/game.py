@@ -314,10 +314,7 @@ class Game:
         self.balance_score = balance_score
         # Pick random balanced team
         blue = random.choice(balanced_teams)
-        orange = []
-        for player in self.players:
-            if player not in blue:
-                orange.append(player)
+        orange = [player for player in self.players if player not in blue]
         for player in blue:
             self.add_to_blue(player)
         for player in orange:
@@ -459,8 +456,8 @@ class Game:
         # Score Players, Avg
         score_total = 0
         for p_data in scores.values():
-            p_rank = p_data["Rank"] if ("Rank" in p_data and p_data["Rank"]) else rank_avg
-            p_wp = p_data["QWP"] if ("QWP" in p_data and p_data["QWP"]) else 0.5
+            p_rank = p_data.get("Rank") or rank_avg
+            p_wp = p_data.get("QWP") or 0.5
             score_adj = (p_wp * 2) - 1  # +/- 1
 
             score = p_rank + score_adj
@@ -518,7 +515,7 @@ class Game:
             inline=False,
         )
 
-        creator = list(self.blue)[0].mention
+        creator = next(iter(self.blue)).mention
         embed.add_field(name="Lobby Creator", value=creator, inline=False)
 
         # Additional Info
@@ -534,7 +531,7 @@ class Game:
                 inline=False,
             )
 
-        embed.set_footer(text="Game ID: {}".format(self.id))
+        embed.set_footer(text=f"Game ID: {self.id}")
         if self.queue.guild.icon:
             embed.set_thumbnail(url=self.queue.guild.icon.url)
         self.info_message = await self.textChannel.send(embed=embed)
@@ -547,7 +544,7 @@ class Game:
         if not helper_role:
             helper_role = self.helper_role
 
-        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
+        sm_title = f"{self.queue.name} {self.queue.maxSize} Mans Game Info"
 
         embed_color = discord.Colour.green()
         if invalid:
@@ -603,11 +600,11 @@ class Game:
                 name="Additional Info",
                 value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
                 "When you are done playing with the current teams please report the winning team "
-                "using the command `{0}sr [winning_team]` where the `winning_team` parameter is either "
+                f"using the command `{self.prefix}sr [winning_team]` where the `winning_team` parameter is either "
                 "`Blue` or `Orange`. Both teams will need to verify the results.\n\n"
-                "If you wish to cancel the game and allow players to queue again you can use the `{0}cg` command."
+                f"If you wish to cancel the game and allow players to queue again you can use the `{self.prefix}cg` command."
                 " Both teams will need to verify that they wish to "
-                "cancel the game.".format(self.prefix),
+                "cancel the game.",
                 inline=False,
             )
         help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact the RSC Development Committee."
@@ -649,7 +646,7 @@ class Game:
             value=f"```{self.roomName} // {self.roomPass}```",
             inline=False,
         )
-        embed.set_footer(text="Game ID: {}".format(self.id))
+        embed.set_footer(text=f"Game ID: {self.id}")
         if self.queue.guild.icon:
             embed.set_thumbnail(url=self.queue.guild.icon.url)
         await self.textChannel.send(embed=embed)

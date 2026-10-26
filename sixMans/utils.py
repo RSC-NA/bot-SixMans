@@ -1,7 +1,23 @@
+import datetime
 import struct
 from collections.abc import Collection
 
 import discord
+
+# Score timestamps are stored as the bot host's local time with no offset, so they're parsed and written as local time.
+SCORE_DATE_FORMAT = "%d-%b-%Y (%H:%M:%S.%f)"
+
+
+def utc_now() -> datetime.datetime:
+    return datetime.datetime.now(datetime.UTC)
+
+
+def parse_score_time(value: str) -> datetime.datetime:
+    return datetime.datetime.strptime(value, SCORE_DATE_FORMAT).astimezone()
+
+
+def format_score_time(when: datetime.datetime) -> str:
+    return when.astimezone().strftime(SCORE_DATE_FORMAT)
 
 
 def format_team_mentions(team: Collection[discord.Member], captains: Collection[discord.Member]) -> str:
