@@ -142,7 +142,7 @@ class TestRemoveGame:
         assert stale is not live
         assert stale != live  # no __eq__: identity only
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._remove_game(guild, stale)
 
         assert cog.games[guild] == []
@@ -155,7 +155,7 @@ class TestRemoveGame:
 
         stale = build_game(queue, players, game_id=42)
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._remove_game(guild, stale)
 
         live_channel.delete.assert_awaited_once()
@@ -168,7 +168,7 @@ class TestRemoveGame:
         cog.games[guild] = [game]
         channel = game.textChannel
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._remove_game(guild, game)
             await cog._remove_game(guild, game)
 
@@ -180,7 +180,7 @@ class TestRemoveGame:
         other_guild = make_guild(guild_id=99)
         game = build_game(queue, players, game_id=42)
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._remove_game(other_guild, game)
 
         cog._save_games.assert_not_awaited()
@@ -209,7 +209,7 @@ class TestFinishGame:
         game = build_game(queue, players, game_id=42)
         cog.games[guild] = [game]
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, game, queue, Winner.BLUE)
             await cog._finish_game(guild, game, queue, Winner.BLUE)
 
@@ -223,7 +223,7 @@ class TestFinishGame:
         cog.games[guild] = [live]
         stale = build_game(queue, players, game_id=42)
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, stale, queue, Winner.ORANGE)
 
         assert cog.scoreboard.queue_games_played(guild, queue.id) == 1
@@ -245,7 +245,7 @@ class TestFinishGame:
         game = build_game(live_queue, players, game_id=42)
         cog.games[guild] = [game]
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, game, stale_queue, Winner.BLUE)
 
         assert cog.scoreboard.queue_games_played(guild, live_queue.id) == 1

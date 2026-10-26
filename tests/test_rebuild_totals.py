@@ -325,7 +325,7 @@ class TestRebuildAlongsideGames:
         cog.games[guild] = [game]
         cog._save_games = AsyncMock()
 
-        with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
+        with patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, game, queue, Winner.BLUE)
 
         # The fix records the new game, but only that game
