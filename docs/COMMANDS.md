@@ -491,14 +491,6 @@ number of games.
 These are facts about the current implementation that are easy to get wrong from
 the command help text alone.
 
-- **Docstring vs. code discrepancies.** `[p]scoreReport`'s docstring says 10
-  minutes; the enforced minimum is 5 (`MINIMUM_GAME_TIME = 300`). Its docstring
-  also mentions a `winning_team` argument, but the command takes no arguments —
-  the winner is chosen with buttons. `[p]getQueueTimeout`'s docstring says the
-  default is 240 minutes; the actual default is 30
-  (`PLAYER_TIMEOUT_TIME = 1800` seconds). `[p]getDefaultTeamSelection`'s
-  docstring says the default is `Random`; it is `Vote`. `[p]setQueueTimeout`'s
-  docstring says "in seconds"; the argument is in minutes.
 - **`ephemeral=True` does nothing on prefix commands.** `[p]queueBan`'s
   confirmation and `[p]queue`'s "you are banned" notice pass `ephemeral=True`,
   which discord.py drops when there is no interaction. Both are posted publicly

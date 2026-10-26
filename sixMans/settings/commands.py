@@ -142,7 +142,7 @@ class SettingsCommands(GuildSettings):
     @commands.command(aliases=["getTeamSelection"])
     @checks.admin_or_permissions(manage_guild=True)
     async def getDefaultTeamSelection(self, ctx: Context):
-        """Get method for Six Mans team selection (Default: Random)"""
+        """Get method for Six Mans team selection (Default: Vote)"""
         if not ctx.guild:
             return
 
@@ -153,7 +153,7 @@ class SettingsCommands(GuildSettings):
     @commands.command(aliases=["setQTimeout", "setQTO", "sqto"])
     @checks.admin_or_permissions()
     async def setQueueTimeout(self, ctx: Context, minutes: int):
-        """Sets the player timeout in seconds for queues in the guild (Default: 30m) ."""
+        """Sets the player timeout in minutes for queues in the guild (Default: 30)."""
         if not ctx.guild:
             return
 
@@ -171,7 +171,7 @@ class SettingsCommands(GuildSettings):
     @commands.guild_only()
     @commands.command(aliases=["getQTO", "gqto", "qto"])
     async def getQueueTimeout(self, ctx: Context):
-        """Gets the player timeout in minutes for queues in the guild (Default: 240)."""
+        """Gets the player timeout in minutes for queues in the guild (Default: 30)."""
         if not ctx.guild:
             return
 

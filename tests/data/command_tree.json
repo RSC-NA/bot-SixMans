@@ -373,7 +373,7 @@
       "checks": [
         "guild_only.<locals>.predicate"
       ],
-      "help": "Get method for Six Mans team selection (Default: Random)",
+      "help": "Get method for Six Mans team selection (Default: Vote)",
       "hidden": false,
       "max_concurrency": null,
       "params": [],
@@ -501,7 +501,7 @@
       "checks": [
         "guild_only.<locals>.predicate"
       ],
-      "help": "Gets the player timeout in minutes for queues in the guild (Default: 240).",
+      "help": "Gets the player timeout in minutes for queues in the guild (Default: 30).",
       "hidden": false,
       "max_concurrency": null,
       "params": [],
@@ -1087,7 +1087,7 @@
       "checks": [
         "guild_only.<locals>.predicate"
       ],
-      "help": "Report which team won the series. Can only be used in a game channel.\nOnly valid after 10 minutes have passed since the game started. Both teams will need to verify the results.\n\n`winning_team` must be either `Blue` or `Orange`",
+      "help": "Report which team won the series. Can only be used in a game channel.\nOnly valid after 5 minutes have passed since the game started. Both captains pick the winner with buttons and must agree.",
       "hidden": false,
       "max_concurrency": [
         1,
@@ -1296,7 +1296,7 @@
       "checks": [
         "guild_only.<locals>.predicate"
       ],
-      "help": "Sets the player timeout in seconds for queues in the guild (Default: 30m) .",
+      "help": "Sets the player timeout in minutes for queues in the guild (Default: 30).",
       "hidden": false,
       "max_concurrency": null,
       "params": [

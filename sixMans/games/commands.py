@@ -182,9 +182,7 @@ class GameCommands(GameLifecycle):
     @commands.command(aliases=["sr", "reportScore"])
     async def scoreReport(self, ctx: Context):
         """Report which team won the series. Can only be used in a game channel.
-        Only valid after 10 minutes have passed since the game started. Both teams will need to verify the results.
-
-        `winning_team` must be either `Blue` or `Orange`"""
+        Only valid after 5 minutes have passed since the game started. Both captains pick the winner with buttons and must agree."""
 
         if not ctx.guild:
             return
