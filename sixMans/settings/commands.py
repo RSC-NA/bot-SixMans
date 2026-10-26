@@ -6,6 +6,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from sixMans.constants import CONFIRM_TIMEOUT
 from sixMans.embeds import BlueEmbed, ErrorEmbed
 from sixMans.enums import GameMode
 from sixMans.settings.config import GuildSettings
@@ -39,7 +40,10 @@ class SettingsCommands(GuildSettings):
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, ctx.author)  # ty: ignore[invalid-argument-type]  # Member.bot is a read-only property; discord.abc.User declares it writable
-        await ctx.bot.wait_for("reaction_add", check=pred)
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=CONFIRM_TIMEOUT)
+        except TimeoutError:
+            return await ctx.send(":x: Timed out. Data **not** cleared.")
         if pred.result:
             # await self.config.clear_all_guilds()
             await self._clear_all_data(ctx.guild)

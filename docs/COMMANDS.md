@@ -442,10 +442,8 @@ Erase **all** 6 Mans data for the guild. Prompts for a ✅/❌ reaction
 confirmation first. This resets settings (category, helper role, AutoMove,
 ReactToVote, lobby VC, default team selection, queue max size, player timeout)
 and deletes all queues, games, player stats, and score history. Active queue
-bans and the queues-enabled flag are **not** cleared.
-
-> The confirmation `wait_for` has no timeout, so an unanswered prompt waits
-> indefinitely.
+bans and the queues-enabled flag are **not** cleared. If the prompt isn't
+answered within 60 seconds, nothing is cleared.
 
 ### `[p]rebuildPlayerTotals`
 Restore all-time totals that a bug failed to record. From 2026-03-16 until the

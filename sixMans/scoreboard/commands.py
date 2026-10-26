@@ -10,6 +10,7 @@ from redbot.core import checks, commands
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate
 
+from sixMans.constants import CONFIRM_TIMEOUT
 from sixMans.scoreboard.embeds import leaderboard_embed, rank_embed
 from sixMans.scoreboard.stats import filter_scores, sort_players
 from sixMans.utils import utc_now
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("red.sixMans.scoreboard")
 
-CONFIRM_TIMEOUT = 60  # How long an admin has to confirm a totals rebuild (seconds)
 DAY = datetime.timedelta(days=1)
 WEEK = datetime.timedelta(weeks=1)
 MONTH = datetime.timedelta(days=30)
