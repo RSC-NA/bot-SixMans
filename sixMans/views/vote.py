@@ -115,12 +115,12 @@ class GameModeVote(discord.ui.View):
         await interaction.response.defer()
         await safe_edit(self.msg, embed=self.embed)
 
-    async def on_timeout(self):
-        """Pick the leading game mode when the vote times out.
+    def resolve_timeout_result(self) -> GameMode:
+        """Pick the leading game mode, or RANDOM if nobody voted.
 
-        The result must be resolved before the edit is attempted. The game's
-        text channel may already be gone, and the caller waiting on this view
-        still needs a mode to dispatch on.
+        discord.py resumes `wait()` before it runs `on_timeout()`, so the caller
+        has to call this itself when `wait()` reports a timeout. Safe to call
+        from both places.
         """
         if self.result is None:
             top_mode = max(self.votes, key=self.votes.get)  # type: ignore
@@ -129,10 +129,19 @@ class GameModeVote(discord.ui.View):
                 self.result = top_mode
             else:
                 self.result = GameMode.RANDOM
+        return self.result
+
+    async def on_timeout(self):
+        """Pick the leading game mode when the vote times out.
+
+        The result must be resolved before the edit is attempted. The game's
+        text channel may already be gone.
+        """
+        result = self.resolve_timeout_result()
 
         embed = discord.Embed(
             title="Game Mode Vote",
-            description=f"Vote timed out. **{self.result.value}** has been selected.",
+            description=f"Vote timed out. **{result.value}** has been selected.",
             color=discord.Color.yellow(),
         )
         await safe_edit(self.msg, embed=embed, view=None)

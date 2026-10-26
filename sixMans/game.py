@@ -207,7 +207,7 @@ class Game:
         self.active_view = vote_view
         try:
             await vote_view.start()
-            await vote_view.wait()
+            timed_out = await vote_view.wait()
         finally:
             if self.active_view is vote_view:
                 self.active_view = None
@@ -215,6 +215,10 @@ class Game:
         if self.aborted or self.channel_deleted or not self.textChannel:
             log.debug(f"Game {self.id} went away during the game mode vote. Skipping team selection.")
             return
+
+        # discord.py resolves `wait()` before it runs `on_timeout()`, so the result is not set yet
+        if timed_out:
+            vote_view.resolve_timeout_result()
 
         if not vote_view.result:
             # Vote failed. We need to decide what to do here.

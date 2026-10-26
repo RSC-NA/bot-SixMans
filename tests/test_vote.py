@@ -4,6 +4,7 @@ Covers:
 - Double voting is allowed (duplicate check commented out).
 - Vote timeout picks the leading mode.
 - Timing out against a deleted channel does not raise.
+- A timed out vote still dispatches team selection on the leading mode.
 """
 
 from typing import cast
@@ -13,9 +14,11 @@ import discord
 import pytest
 
 from sixMans.enums import GameMode
+from sixMans.game import Game
+from sixMans.queue import SixMansQueue
 from sixMans.views.vote import GameModeVote
 
-from .conftest import FakeGame, as_game, make_interaction, make_member
+from .conftest import FakeGame, FakeQueue, as_game, make_interaction, make_member, make_text_channel
 
 
 @pytest.mark.asyncio
@@ -123,3 +126,40 @@ async def test_start_without_channel_stops_view():
 
     assert view.is_finished()
     assert view.msg is None
+
+
+@pytest.mark.asyncio
+async def test_timed_out_vote_dispatches_leading_mode(monkeypatch):
+    """A vote that times out must go on to team selection with the leading mode.
+
+    Regression test: discord.py resolves `wait()` before it runs `on_timeout()`,
+    so reading the result straight after `wait()` saw None and reported an error.
+    Calling `on_timeout()` directly, as the tests above do, hides that ordering.
+    """
+    players = [make_member(f"P{i}", i) for i in range(1, 7)]
+    game = Game(
+        queue=cast(SixMansQueue, FakeQueue()),
+        players=players,
+        teamSelection=GameMode.VOTE,
+        text_channel=make_text_channel(),
+    )
+
+    original_start = GameModeVote.start
+
+    async def start_vote_then_time_out(self):
+        await original_start(self)
+        await self.process_vote(make_interaction(players[0], data={"custom_id": GameMode.CAPTAINS.value}))
+        # Run the real discord.py timeout task rather than calling on_timeout() directly
+        self.timeout = 0.01
+        self._start_listening_from_store(MagicMock())
+
+    monkeypatch.setattr(GameModeVote, "start", start_vote_then_time_out)
+    dispatched = AsyncMock()
+    monkeypatch.setattr(Game, "captains_pick_teams", dispatched)
+
+    await game.vote_team_selection()
+
+    sends = [str(c) for c in cast(MagicMock, game.textChannel).send.call_args_list]
+    assert not any("Error during game mode vote" in s for s in sends), f"Reported an error on a timed out vote: {sends}"
+    assert game.teamSelection == GameMode.CAPTAINS
+    dispatched.assert_awaited_once()
