@@ -46,22 +46,19 @@ async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, Player
             break
 
     author = ctx.author
-    try:
-        author_index = [y[0] for y in sorted_players].index(f"{author.id}")
-        if author_index is not None and author_index > 9:
-            author_info = sorted_players[author_index][1]
-            playerStrings.append(f"\n`{author_index + 1}` **{author.display_name:25s}:**")
-            try:
-                author_wins = author_info["Wins"]
-                author_gp = author_info["GamesPlayed"]
-                author_wp = round(author_wins / author_gp * 100, 1)
-                author_wp = f"{author_wp}%" if author_wp != 100 else "100%"
-            except ZeroDivisionError:
-                author_wp = "N/A"
+    author_index = next((idx for idx, (player_id, _) in enumerate(sorted_players) if player_id == str(author.id)), None)
+    if author_index is not None and author_index > 9:
+        author_info = sorted_players[author_index][1]
+        playerStrings.append(f"\n`{author_index + 1}` **{author.display_name:25s}:**")
+        try:
+            author_wins = author_info["Wins"]
+            author_gp = author_info["GamesPlayed"]
+            author_wp = round(author_wins / author_gp * 100, 1)
+            author_wp = f"{author_wp}%" if author_wp != 100 else "100%"
+        except ZeroDivisionError:
+            author_wp = "N/A"
 
-            statStrings.append(f"\nPoints: `{author_info['Points']:4d}`  Wins: `{author_wins:3d}`  GP: `{author_gp:3d}` WP: `{author_wp:5s}`")
-    except Exception:
-        pass
+        statStrings.append(f"\nPoints: `{author_info['Points']:4d}`  Wins: `{author_wins:3d}`  GP: `{author_gp:3d}` WP: `{author_wp:5s}`")
 
     embed.add_field(name="Player", value="\n".join(playerStrings), inline=True)
     embed.add_field(name="Stats", value="\n".join(statStrings), inline=True)
