@@ -190,7 +190,8 @@ class ScoreboardCommands:
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        embed = await leaderboard_embed(ctx, sort_players(players), queue_name, self.queueMaxSize[ctx.guild], games_played, label)
+        team_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
+        embed = await leaderboard_embed(ctx, sort_players(players), queue_name, team_size, games_played, label)
         await ctx.send(embed=embed)
 
     async def _send_rank(self, ctx: Context, player: discord.Member | None, queue_name: str | None, label: str, window: datetime.timedelta | None):

@@ -62,7 +62,7 @@
         }
       ],
       "flags": 0,
-      "title": "Duels 6 Mans Daily Leaderboard",
+      "title": "Duels 2 Mans Daily Leaderboard",
       "type": "rich"
     }
   },
@@ -135,7 +135,7 @@
         }
       ],
       "flags": 0,
-      "title": "Duels 6 Mans Monthly Leaderboard",
+      "title": "Duels 2 Mans Monthly Leaderboard",
       "type": "rich"
     }
   },
@@ -205,7 +205,7 @@
         }
       ],
       "flags": 0,
-      "title": "Duels 6 Mans All-time Leaderboard",
+      "title": "Duels 2 Mans All-time Leaderboard",
       "type": "rich"
     }
   },
