@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import datetime
 import itertools
@@ -50,6 +51,8 @@ class SixMansQueue:
         self.lobby_vc = lobby_vc
         self.activeJoinLog: dict[int, datetime.datetime] = {}
         # TODO: active join log could maintain queue during downtime
+        # Held from the fullness check to the pop, so two joins can't both pop the same players
+        self.pop_lock = asyncio.Lock()
 
         # Stats live in the Scoreboard. These are the queue's stats as of that move, written back
         # unchanged so code from before it, which requires them, still loads after a rollback.
@@ -83,7 +86,9 @@ class SixMansQueue:
         self.queue.put(player)
 
     def _get(self):
-        player = self.queue.get()
+        # `Queue.get()` blocks the thread when empty, which would freeze the whole event loop.
+        # Raise `queue.Empty` instead.
+        player = self.queue.get_nowait()
         with contextlib.suppress(KeyError):
             del self.activeJoinLog[player.id]
         return player

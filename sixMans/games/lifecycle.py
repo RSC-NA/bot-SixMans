@@ -120,29 +120,41 @@ class GameLifecycle:
 
         return departed
 
+    async def _take_players(self, guild: discord.Guild, six_mans_queue: SixMansQueue) -> list[discord.Member] | None:
+        """Pop a game's worth of players off the front of the queue, or return None if it can't pop.
+
+        The queue's pop lock is held from the fullness check to the pop. The departed player check
+        can await, so two joins landing together could otherwise both see a full queue and both pop
+        it, the second one coming up short.
+        """
+        async with six_mans_queue.pop_lock:
+            if not six_mans_queue.queue_full():
+                return None
+
+            # Players sit in the queue as Member objects for up to PLAYER_TIMEOUT_TIME. Anyone who left
+            # the guild while waiting can no longer be given channel permission overwrites (Discord
+            # returns 404 Unknown Overwrite), so drop them before the queue is popped.
+            missing = await self._get_departed_players(guild, six_mans_queue)
+            if missing:
+                log.warning(f"[{guild.name}] Removing players no longer in the guild from the {six_mans_queue.name} queue: {[p.id for p in missing]}")
+                for player in missing:
+                    await self._remove_from_queue(player, six_mans_queue)
+
+                names = ", ".join(player.display_name for player in missing)
+                verb = "are" if len(missing) > 1 else "is"
+                description = (
+                    f"**{names}** {verb} no longer in the server and cannot be added to a game.\n\n"
+                    f"The **{six_mans_queue.name}** queue is now at **{six_mans_queue.queue.qsize()}/{six_mans_queue.maxSize}**."
+                )
+                await six_mans_queue.send_message(embed=WarningEmbed(title="Queue Not Popped", description=description))
+                return None
+
+            return [six_mans_queue._get() for _ in range(six_mans_queue.maxSize)]
+
     async def create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue, prefix="?"):
-        if not six_mans_queue.queue_full():
+        players = await self._take_players(guild, six_mans_queue)
+        if players is None:
             return None
-
-        # Players sit in the queue as Member objects for up to PLAYER_TIMEOUT_TIME. Anyone who left
-        # the guild while waiting can no longer be given channel permission overwrites (Discord
-        # returns 404 Unknown Overwrite), so drop them before the queue is popped.
-        missing = await self._get_departed_players(guild, six_mans_queue)
-        if missing:
-            log.warning(f"[{guild.name}] Removing players no longer in the guild from the {six_mans_queue.name} queue: {[p.id for p in missing]}")
-            for player in missing:
-                await self._remove_from_queue(player, six_mans_queue)
-
-            names = ", ".join(player.display_name for player in missing)
-            verb = "are" if len(missing) > 1 else "is"
-            description = (
-                f"**{names}** {verb} no longer in the server and cannot be added to a game.\n\n"
-                f"The **{six_mans_queue.name}** queue is now at **{six_mans_queue.queue.qsize()}/{six_mans_queue.maxSize}**."
-            )
-            await six_mans_queue.send_message(embed=WarningEmbed(title="Queue Not Popped", description=description))
-            return None
-
-        players = [six_mans_queue._get() for _ in range(six_mans_queue.maxSize)]
 
         await six_mans_queue.send_message(message="**Queue is full! Game is being created.**")
 

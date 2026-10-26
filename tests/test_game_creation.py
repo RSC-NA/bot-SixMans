@@ -153,6 +153,35 @@ class TestCreateGameValidatesMembers:
         assert cog.games[guild] == [game]
         assert game.players == set(players)
 
+    async def test_simultaneous_pops_take_players_once(self, cog, guild, players):
+        """Two joins popping a 7/6 queue together must create one game, not pop it twice.
+
+        The member lookup awaits, which used to let the second pop run between the first one's
+        fullness check and its pop, then block the event loop on an empty queue.
+        """
+        extra = make_member(7, guild)
+        everyone = [*players, extra]
+        q = make_queue(guild, everyone)
+        cog.queues[guild] = [q]
+        guild.get_member = MagicMock(return_value=None)
+
+        async def slow_fetch(pid):
+            await asyncio.sleep(0)
+            return everyone[pid - 1]
+
+        guild.fetch_member = AsyncMock(side_effect=slow_fetch)
+
+        with (
+            patch.object(Game, "create_game_channels", new=AsyncMock()),
+            patch.object(Game, "process_team_selection_method", new=AsyncMock()),
+        ):
+            first, second = await asyncio.gather(cog.create_game(guild, q), cog.create_game(guild, q))
+
+        assert first is not None
+        assert second is None
+        assert cog.games[guild] == [first]
+        assert list(q.queue.queue) == [extra]
+
 
 class TestCreateGameLeavesOtherQueues:
     """Popped players must leave their other queues before team selection starts.
