@@ -1,6 +1,8 @@
 # sixMans Command Reference
 
-Every command in the `sixMans` cog, as implemented in [sixMans/sixMans.py](../sixMans/sixMans.py).
+Every command in the `sixMans` cog, as implemented in [sixMans/sixMans.py](../sixMans/sixMans.py)
+and, for leaderboards, ranks and `[p]rebuildPlayerTotals`,
+[sixMans/scoreboard/commands.py](../sixMans/scoreboard/commands.py).
 
 ## Conventions
 
@@ -148,9 +150,9 @@ Limited to one concurrent invocation per channel.
 `[p]queueLeaderBoard` (alias `qlb`) is a command group. Invoking it with no
 subcommand sends the group's help. All subcommands are open to **anyone** and
 take an optional consume-rest `queue_name`; without it, stats span all queues in
-the guild. Each ranks players by points (ties broken by wins) and shows the
-leaders, with the caller's own row appended if they place outside the top ten.
-Rows show points, wins, games played, and win percentage.
+the guild. Each ranks players by points (ties broken by wins) and shows the top
+ten, with the caller's own row appended if they aren't among them. Rows show
+points, wins, games played, and win percentage.
 
 | Command | Aliases | Window |
 | --- | --- | --- |
@@ -161,9 +163,10 @@ Rows show points, wins, games played, and win percentage.
 | `[p]qlb year [queue_name]` | `yearly`, `yr` | Last 365 days |
 
 Note that `overall` reads the running per-player totals, while the other four
-replay the stored score history and filter by date. The group docstring says
-"top ten", but the loop breaks one iteration late, so eleven rows are listed —
-and a caller ranked exactly 11th is then listed twice.
+replay the stored score history and filter by date. Players who have left the
+server are skipped but keep their rank number, so the list can jump (for example
+from 9 to 11). A `queue_name` that matches no queue is ignored and the
+guild-wide board is shown instead.
 
 ---
 
@@ -173,7 +176,8 @@ and a caller ranked exactly 11th is then listed twice.
 with no subcommand sends the group's help. All subcommands are open to
 **anyone** and take `[player] [queue_name]` — `player` defaults to the caller,
 and `queue_name` is consume-rest and defaults to all queues. Because `player` is
-optional, `[p]rank alltime SomeQueue` is read as a queue name.
+optional, `[p]rank alltime SomeQueue` is read as a queue name. As with
+leaderboards, a `queue_name` that matches no queue falls back to all queues.
 
 | Command | Aliases | Window |
 | --- | --- | --- |
@@ -309,7 +313,8 @@ appended to — omitting channels leaves the queue with none.
 ### `[p]removeQueue <queue_name>`
 **Red admin / Manage Server**
 
-Delete a queue. `queue_name` is consume-rest.
+Delete a queue. `queue_name` is consume-rest. The queue's stats are kept, marked
+as deleted under the queue's final name, and no longer appear anywhere.
 
 ### `[p]setQueueTS <queue_name> <team_selection>`
 Aliases: `setQTS`, `setQueueTeamSelection`, `sqts` · **Red admin + Helper**
@@ -438,6 +443,30 @@ bans and the queues-enabled flag are **not** cleared.
 > The confirmation `wait_for` has no timeout, so an unanswered prompt waits
 > indefinitely.
 
+### `[p]rebuildPlayerTotals`
+Restore all-time totals that a bug failed to record. From 2026-03-16 until the
+fix shipped, a player's first game was saved to the score history but never
+added to the stored all-time totals, so new players were missing from
+`[p]qlb overall` and `[p]rank alltime`. The dated leaderboards and ranks broke
+too, but they are recalculated from score history every time, so the fix alone
+repaired them; only the stored all-time totals need this command.
+
+The command rebuilds totals from score history only for players whose first game
+(server-wide or in a given queue) came after the bug shipped, and only if their
+stored totals are missing or show fewer games than their history. Nobody's
+totals go down and nobody else is touched, including older players whose stored
+totals differ from their history for unrelated reasons.
+
+1. It lists how many players it will add or update, server-wide and per queue,
+   and asks for a ✅/❌ reaction. It gives up after 60 seconds.
+2. On ✅, it recalculates from current data, in case a game finished while it
+   waited, and applies the changes.
+3. It posts `player_totals_changes.json`, with the before and after totals for
+   every changed player, which can be used to undo a change by hand.
+
+Running it again once it has been applied finds nothing to change. Deleted
+queues are skipped.
+
 ---
 
 ## Scoring
@@ -449,7 +478,9 @@ set by `[p]addNewQueue` and `[p]editQueue`:
 - Winners additionally receive `points_per_win`.
 
 Totals are tracked per queue and guild-wide, and each result is also appended to
-a score history that the dated leaderboard and rank views replay.
+a score history that the dated leaderboard and rank views replay. Leaderboards
+count games by game, so queues of different sizes (Duels, Twos) report the right
+number of games.
 
 ---
 
