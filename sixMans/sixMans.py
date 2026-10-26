@@ -5,6 +5,7 @@ import io
 import json
 import logging
 import random
+from collections.abc import Callable
 
 import discord
 from discord.ext.commands import Context
@@ -28,7 +29,7 @@ from sixMans.queue import SixMansQueue
 from sixMans.scoreboard.scoreboard import Scoreboard
 from sixMans.scoreboard.stats import filter_scores, sort_players
 from sixMans.strings import Strings
-from sixMans.types import QueueBan, SixMansConfig
+from sixMans.types import PlayerStats, QueueBan, SixMansConfig
 from sixMans.utils import utc_now
 from sixMans.views.cancel import CancelView, ForceCancelView
 from sixMans.views.score import ForceResultView, ScoreReportView
@@ -59,6 +60,8 @@ defaults = SixMansConfig(
     Scores=[],
     QueuesEnabled=True,
     QueueBans={},
+    QueueStats={},
+    ScoreboardSchema=0,
 )
 
 
@@ -83,6 +86,7 @@ class SixMans(commands.Cog):
         """Load saved game data on startup"""
         log.debug("In on_ready()")
         await self._load_guild_data()
+        await self._load_scoreboard()
         await self._load_queues()
         await self._load_games()
 
@@ -90,6 +94,7 @@ class SixMans(commands.Cog):
         """Load saved game data on startup"""
         log.debug("In cog_load()")
         await self._load_guild_data()
+        await self._load_scoreboard()
         await self._load_queues()
         await self._load_games()
 
@@ -198,6 +203,7 @@ class SixMans(commands.Cog):
     async def preLoadData(self, ctx: Context):
         """Reloads all data for the 6mans cog"""
         await self._load_guild_data()
+        await self._load_scoreboard()
         await self._load_queues()
         await self._load_games()
         await ctx.send("Done")
@@ -275,8 +281,6 @@ class SixMans(commands.Cog):
             ctx.guild,
             queue_channels,
             points,
-            {},
-            0,
             queue_max_size,
             teamSelection=team_selection,
             category=await self._category(ctx.guild),
@@ -527,6 +531,7 @@ class SixMans(commands.Cog):
 
         self.queues[ctx.guild].remove(queue)
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
+        await self.scoreboard.mark_queue_deleted(ctx.guild, queue)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -1142,8 +1147,8 @@ class SixMans(commands.Cog):
         queue_name = queue.name if queue else ctx.guild.name
 
         if queue:
-            players = queue.players
-            games_played = queue.gamesPlayed
+            players = self.scoreboard.queue_players(ctx.guild, queue.id)
+            games_played = self.scoreboard.queue_games_played(ctx.guild, queue.id)
         else:
             players = await self.scoreboard.players(ctx.guild)
             games_played = await self.scoreboard.games_played(ctx.guild)
@@ -1297,7 +1302,7 @@ class SixMans(commands.Cog):
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         if queue:
-            players = queue.players
+            players = self.scoreboard.queue_players(ctx.guild, queue.id)
         else:
             players = await self.scoreboard.players(ctx.guild)
         queue_name = queue.name if queue else ctx.guild.name
@@ -1858,7 +1863,7 @@ class SixMans(commands.Cog):
             case Winner.PENDING:
                 raise RuntimeError("Invalid result for game winner.")
 
-        await self.scoreboard.record_game(guild, six_mans_queue, game.id, winning_players, losing_players, save_queues=lambda: self._save_queues(guild, self.queues[guild]))
+        await self.scoreboard.record_game(guild, six_mans_queue, game.id, winning_players, losing_players)
 
         if await self._get_automove(guild):  # game.automove not working?
             qlobby_vc = await self._get_q_lobby_vc(guild)
@@ -1969,8 +1974,7 @@ class SixMans(commands.Cog):
             game.captains[1] = random.sample(list(game.orange), 1)[0]  # Swap Orange team captain
 
     async def _rebuild_player_totals(self, guild: discord.Guild, apply: bool) -> dict:
-        queues = self.queues.get(guild, [])
-        return await self.scoreboard.rebuild_totals(guild, queues, apply, save_queues=lambda: self._save_queues(guild, queues))
+        return await self.scoreboard.rebuild_totals(guild, self.queues.get(guild, []), apply)
 
     def _summarize_totals_rebuild(self, record: dict) -> str:
         def describe(changes: dict) -> str:
@@ -2052,6 +2056,7 @@ class SixMans(commands.Cog):
             automove=await self._get_automove(guild),
             prefix=prefix,
             save_callback=lambda: self._save_games(guild, self.games[guild]),
+            stats_lookup=self._queue_stats_lookup(guild),
         )
         try:
             await game.create_game_channels(await self._category(guild))
@@ -2077,6 +2082,9 @@ class SixMans(commands.Cog):
         # Save again once teams are selected
         await self._save_games(guild, self.games[guild])
         return game
+
+    def _queue_stats_lookup(self, guild: discord.Guild) -> Callable[[int, int], PlayerStats | None]:
+        return lambda queue_id, player_id: self.scoreboard.queue_player(guild, queue_id, player_id)
 
     async def get_info(self, ctx: Context) -> tuple[Game | None, SixMansQueue | None]:
         if not ctx.guild:
@@ -2203,10 +2211,10 @@ class SixMans(commands.Cog):
         elif default_lobby_vc:
             embed.add_field(name="Lobby VC", value=default_lobby_vc, inline=False)
 
-        embed.add_field(name="Games Played", value=f"{queue.gamesPlayed}\n", inline=False)
+        embed.add_field(name="Games Played", value=f"{self.scoreboard.queue_games_played(queue.guild, queue.id)}\n", inline=False)
         embed.add_field(
             name="Unique Players All-Time",
-            value=f"{len(queue.players)}\n",
+            value=f"{len(self.scoreboard.queue_players(queue.guild, queue.id))}\n",
             inline=False,
         )
         embed.add_field(
@@ -2393,6 +2401,10 @@ class SixMans(commands.Cog):
             log.debug(f"Guild Queue Max Size: {self.queueMaxSize[guild]}")
             log.debug(f"Guild Player Timeout: {self.player_timeout_time[guild]}")
 
+    async def _load_scoreboard(self):
+        for guild in self.bot.guilds:
+            await self.scoreboard.load(guild)
+
     async def _load_queues(self):
         log.info("Preloading existing queues...")
         # await self.bot.wait_until_ready()
@@ -2451,8 +2463,8 @@ class SixMans(commands.Cog):
                     guild=guild,
                     channels=queue_channels,
                     points=dict(q.Points),
-                    gamesPlayed=q.GamesPlayed,
-                    players=player_dict,
+                    legacy_games_played=q.GamesPlayed,
+                    legacy_players=player_dict,
                     maxSize=queue_size,
                     teamSelection=team_selection,
                     category=category,
@@ -2557,6 +2569,7 @@ class SixMans(commands.Cog):
                     teamSelection=g.TeamSelection,
                     winner=g.Winner,
                     save_callback=lambda g=guild: self._save_games(g, self.games[g]),  # type: ignore[misc]
+                    stats_lookup=self._queue_stats_lookup(guild),
                 )
 
                 log.debug(f"Guild: {guild.name} ID: {game.id} game.textChannel: {game.textChannel} State: {game.state} Mode: {game.teamSelection}")

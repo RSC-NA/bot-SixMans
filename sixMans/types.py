@@ -25,6 +25,13 @@ class PlayerStats(TypedDict):
     Wins: int
 
 
+class QueueStats(TypedDict):
+    Name: str  # Kept so a deleted queue's stats still say which queue they were
+    Deleted: bool
+    GamesPlayed: int
+    Players: dict[str, PlayerStats]
+
+
 class QueueBan(TypedDict):
     expires: int | float
     banned_by: int
@@ -47,6 +54,8 @@ class SixMansConfig(TypedDict):
     ReactToVote: bool
     Scores: list[PlayerScore]
     QueueBans: dict[str, "QueueBan"]
+    QueueStats: dict[str, QueueStats]
+    ScoreboardSchema: int
 
 
 class OrderedSet(collections.abc.MutableSet):

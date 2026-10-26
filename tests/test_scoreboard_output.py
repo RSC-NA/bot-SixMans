@@ -107,7 +107,7 @@ async def collect(cog, ctx, members) -> dict:
     for queue_id in (GENERAL, DUELS):
         output[f"queue info {queue_id}"] = {"embed": cog.embed_queue_info(queues[queue_id]).to_dict()}
 
-    game = Game(queue=queues[GENERAL], players=[members[p] for p in (1, 2, 7, 8, 9, 15)])
+    game = Game(queue=queues[GENERAL], players=[members[p] for p in (1, 2, 7, 8, 9, 15)], stats_lookup=cog._queue_stats_lookup(ctx.guild))
     output["balance scores"] = {str(member.id): data for member, data in sorted(game.get_player_scores().items(), key=lambda kv: kv[0].id)}
     return output
 

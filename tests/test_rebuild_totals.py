@@ -207,8 +207,7 @@ async def cog(config, guild, history, stored_players, stored_queues):
     await config.guild(guild).Players.set(stored_players)
     await config.guild(guild).Queues.set(stored_queues)
     await config.guild(guild).GamesPlayed.set(1234)
-    await cog._load_guild_data()
-    await cog._load_queues()
+    await cog.cog_load()
     return cog
 
 
@@ -231,21 +230,21 @@ EXPECTED_LOWER_PLAYERS = {"1": totals(3, 1, 1), "7": totals(3, 1, 1)}
 class TestRebuildPlayerTotals:
     async def test_preview_changes_nothing(self, cog, guild, settings_path):
         on_disk = settings_path.read_bytes()
-        in_memory = {q.id: copy.deepcopy(q.players) for q in cog.queues[guild]}
+        in_memory = {q.id: copy.deepcopy(cog.scoreboard.queue_players(guild, q.id)) for q in cog.queues[guild]}
 
         record = await cog._rebuild_player_totals(guild, apply=False)
 
         assert set(record["server"]) == {"3", "4", "5"}
         assert settings_path.read_bytes() == on_disk
-        assert {q.id: q.players for q in cog.queues[guild]} == in_memory
+        assert {q.id: cog.scoreboard.queue_players(guild, q.id) for q in cog.queues[guild]} == in_memory
 
     async def test_applies_exactly_the_expected_changes_to_disk(self, cog, guild, settings_path):
         await cog._rebuild_player_totals(guild, apply=True)
         saved = read_guild(settings_path, guild)
 
         assert saved["Players"] == EXPECTED_SERVER_PLAYERS
-        assert saved["Queues"][str(GENERAL)]["Players"] == EXPECTED_GENERAL_PLAYERS
-        assert saved["Queues"][str(LOWER)]["Players"] == EXPECTED_LOWER_PLAYERS
+        assert saved["QueueStats"][str(GENERAL)]["Players"] == EXPECTED_GENERAL_PLAYERS
+        assert saved["QueueStats"][str(LOWER)]["Players"] == EXPECTED_LOWER_PLAYERS
 
     async def test_leaves_everything_else_identical(self, cog, guild, settings_path, history):
         before = read_guild(settings_path, guild)
@@ -255,10 +254,11 @@ class TestRebuildPlayerTotals:
 
         assert after["Scores"] == before["Scores"] == json.loads(json.dumps(history))
         assert after["GamesPlayed"] == before["GamesPlayed"] == 1234
-        for queue_id, queue in before["Queues"].items():
-            assert {k: v for k, v in after["Queues"][queue_id].items() if k != "Players"} == {k: v for k, v in queue.items() if k != "Players"}
-        assert after["Queues"][str(GENERAL)]["GamesPlayed"] == 400
-        assert after["Queues"][str(LOWER)]["GamesPlayed"] == 12
+        assert after["Queues"] == before["Queues"]
+        for queue_id, queue in before["QueueStats"].items():
+            assert {k: v for k, v in after["QueueStats"][queue_id].items() if k != "Players"} == {k: v for k, v in queue.items() if k != "Players"}
+        assert after["QueueStats"][str(GENERAL)]["GamesPlayed"] == 400
+        assert after["QueueStats"][str(LOWER)]["GamesPlayed"] == 12
         assert set(after) == set(before)
 
     async def test_record_has_before_and_after_for_every_change(self, cog, guild):
@@ -286,18 +286,17 @@ class TestRebuildPlayerTotals:
         record = await cog._rebuild_player_totals(guild, apply=True)
         snapshot = copy.deepcopy(record)
 
-        give_points(cog.queues[guild][0].players, score(4, AFTER + 5))
+        give_points(cog.scoreboard.queue_players(guild, GENERAL), score(4, AFTER + 5))
 
         assert record == snapshot
 
     async def test_survives_a_reload(self, cog, guild):
         await cog._rebuild_player_totals(guild, apply=True)
 
-        await cog._load_queues()
+        await cog.cog_load()
 
-        queues = {q.id: q for q in cog.queues[guild]}
-        assert queues[GENERAL].players == EXPECTED_GENERAL_PLAYERS
-        assert queues[LOWER].players == EXPECTED_LOWER_PLAYERS
+        assert cog.scoreboard.queue_players(guild, GENERAL) == EXPECTED_GENERAL_PLAYERS
+        assert cog.scoreboard.queue_players(guild, LOWER) == EXPECTED_LOWER_PLAYERS
         assert await cog.scoreboard.players(guild) == EXPECTED_SERVER_PLAYERS
 
     async def test_running_again_changes_nothing(self, cog, guild, settings_path):
@@ -336,12 +335,12 @@ class TestRebuildAlongsideGames:
 
         players = await cog.scoreboard.players(guild)
         assert players["3"] == totals(7, 2, 3)  # 2 earlier games plus the one just played
-        assert queue.players["3"] == totals(7, 2, 3)
+        assert cog.scoreboard.queue_player(guild, GENERAL, 3) == totals(7, 2, 3)
         # Brand new players are recorded by the fix itself and need nothing rebuilt
         for pid in ("8", "9"):
-            assert players[pid] == queue.players[pid] == totals(3, 1, 1)
+            assert players[pid] == cog.scoreboard.queue_players(guild, GENERAL)[pid] == totals(3, 1, 1)
         for pid in ("10", "11", "12"):
-            assert players[pid] == queue.players[pid] == totals(1, 0, 1)
+            assert players[pid] == cog.scoreboard.queue_players(guild, GENERAL)[pid] == totals(1, 0, 1)
         assert players["1"] == totals(4, 1, 2)
         assert players["6"] == totals(30, 10, 20)
 
@@ -382,8 +381,8 @@ class TestRebuildAlongsideGames:
         await asyncio.wait_for(asyncio.gather(first, second), 1)
 
         saved = read_guild(settings_path, guild)
-        assert saved["Players"]["3"] == saved["Queues"][str(GENERAL)]["Players"]["3"] == totals(7, 2, 3)
-        assert saved["Players"]["4"] == saved["Queues"][str(GENERAL)]["Players"]["4"] == totals(7, 2, 3)
+        assert saved["Players"]["3"] == saved["QueueStats"][str(GENERAL)]["Players"]["3"] == totals(7, 2, 3)
+        assert saved["Players"]["4"] == saved["QueueStats"][str(GENERAL)]["Players"]["4"] == totals(7, 2, 3)
         assert saved["Players"]["8"] == totals(3, 1, 1)
         assert saved["Players"]["5"] == totals(3, 1, 1)
         assert len(saved["Scores"]) == 12 + 6
@@ -452,7 +451,7 @@ class TestRebuildCommand:
         await run_command(cog, ctx)
 
         saved = read_guild(settings_path, guild)
-        assert saved["Players"]["4"] == saved["Queues"][str(GENERAL)]["Players"]["4"] == totals(10, 3, 4)
+        assert saved["Players"]["4"] == saved["QueueStats"][str(GENERAL)]["Players"]["4"] == totals(10, 3, 4)
         attached = json.loads(ctx.send.await_args_list[-1].kwargs["file"].fp.read())
         assert attached["server"]["4"] == {"before": totals(4, 1, 2), "after": totals(10, 3, 4)}
 

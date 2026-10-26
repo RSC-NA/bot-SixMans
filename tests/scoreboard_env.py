@@ -43,6 +43,8 @@ def make_guild(channel_ids=(10, 20, 30)):
     guild.id = GUILD_ID
     guild.name = "RSC 3v3"
     channels = {cid: make_channel(cid) for cid in channel_ids}
+    for channel in channels.values():
+        channel.guild = guild
     guild.get_channel = lambda channel_id: channels.get(channel_id)
     return guild
 
@@ -66,8 +68,7 @@ async def build_cog(config: Config, guild, guild_data: dict) -> SixMans:
         cog = SixMans(bot)
     for key, value in guild_data.items():
         await config.guild(guild).get_attr(key).set(value)
-    await cog._load_guild_data()
-    await cog._load_queues()
+    await cog.cog_load()
     return cog
 
 

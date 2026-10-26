@@ -69,7 +69,7 @@ def players(guild):
 
 @pytest.fixture
 def queue(guild):
-    """A real SixMansQueue so gamesPlayed accounting is exercised for real."""
+    """A real SixMansQueue, scored for real through the cog's Scoreboard."""
     channel = MagicMock(spec=discord.TextChannel)
     channel.send = AsyncMock()
     return SixMansQueue(
@@ -77,8 +77,6 @@ def queue(guild):
         guild=guild,
         channels=[channel],
         points={"Play": 1, "Win": 3},
-        players={},
-        gamesPlayed=0,
         maxSize=6,
         id=555,
     )
@@ -204,7 +202,7 @@ class TestFinishGame:
 
         assert await cog.scoreboard.scores(guild) == []
         assert await cog.scoreboard.games_played(guild) == 0
-        assert queue.gamesPlayed == 0
+        assert cog.scoreboard.queue_games_played(guild, queue.id) == 0
 
     async def test_awards_points_exactly_once(self, cog, guild, queue, players):
         """Two captains each opening a report prompt used to double credit everyone."""
@@ -215,7 +213,7 @@ class TestFinishGame:
             await cog._finish_game(guild, game, queue, Winner.BLUE)
             await cog._finish_game(guild, game, queue, Winner.BLUE)
 
-        assert queue.gamesPlayed == 1
+        assert cog.scoreboard.queue_games_played(guild, queue.id) == 1
         assert await cog.scoreboard.games_played(guild) == 1
         # One score row per player, not two
         assert len(await cog.scoreboard.scores(guild)) == len(players)
@@ -228,18 +226,16 @@ class TestFinishGame:
         with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, stale, queue, Winner.ORANGE)
 
-        assert queue.gamesPlayed == 1
+        assert cog.scoreboard.queue_games_played(guild, queue.id) == 1
         assert cog.games[guild] == []
 
     async def test_uses_the_live_queue_object_after_a_reload(self, cog, guild, players):
-        """`_load_queues()` rebuilds queues too; scoring a detached one loses the win."""
+        """`_load_queues()` rebuilds queues too, so a held object can have stale settings like points."""
         stale_queue = SixMansQueue(
             name="Test Queue",
             guild=guild,
             channels=[MagicMock(spec=discord.TextChannel)],
-            points={"Play": 1, "Win": 3},
-            players={},
-            gamesPlayed=0,
+            points={"Play": 100, "Win": 300},
             maxSize=6,
             id=555,
         )
@@ -252,8 +248,9 @@ class TestFinishGame:
         with patch("sixMans.sixMans.asyncio.sleep", new=AsyncMock()):
             await cog._finish_game(guild, game, stale_queue, Winner.BLUE)
 
-        assert live_queue.gamesPlayed == 1
-        assert stale_queue.gamesPlayed == 0
+        assert cog.scoreboard.queue_games_played(guild, live_queue.id) == 1
+        # Winners get the live queue's 1 + 3 points, not the stale 100 + 300
+        assert {s["Points"] for s in await cog.scoreboard.scores(guild)} == {1, 4}
 
 
 # ---------------------------------------------------------------------------

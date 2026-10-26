@@ -30,13 +30,13 @@ class SixMansQueue:
         guild: discord.Guild,
         channels: list[discord.TextChannel],
         points: dict[str, int],
-        players: dict[str, PlayerStats],
-        gamesPlayed: int,
         maxSize: int,
         id: int | None = None,
         category: discord.CategoryChannel | None = None,
         lobby_vc: discord.VoiceChannel | None = None,
         teamSelection=GameMode.VOTE,
+        legacy_players: dict[str, PlayerStats] | None = None,
+        legacy_games_played: int = 0,
     ):
         self.id = id or uuid.uuid4().int
         self.name = name
@@ -44,8 +44,6 @@ class SixMansQueue:
         self.guild = guild
         self.channels = channels
         self.points = points
-        self.players = players
-        self.gamesPlayed = gamesPlayed
         self.maxSize = maxSize
         self.teamSelection: GameMode = teamSelection
         self.category = category
@@ -53,11 +51,10 @@ class SixMansQueue:
         self.activeJoinLog: dict[int, datetime.datetime] = {}
         # TODO: active join log could maintain queue during downtime
 
-    def get_player_summary(self, player: discord.Member):
-        try:
-            return self.players[str(player.id)]
-        except KeyError:
-            return None
+        # Stats live in the Scoreboard. These are the queue's stats as of that move, written back
+        # unchanged so code from before it, which requires them, still loads after a rollback.
+        self.legacy_players = legacy_players or {}
+        self.legacy_games_played = legacy_games_played
 
     async def send_message(self, message: str = "", embed: discord.Embed | None = None) -> list[discord.Message]:
         messages = []
@@ -109,8 +106,8 @@ class SixMansQueue:
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
             "Points": self.points,
-            "Players": self.players,
-            "GamesPlayed": self.gamesPlayed,
+            "Players": self.legacy_players,
+            "GamesPlayed": self.legacy_games_played,
             "TeamSelection": self.teamSelection,
             "MaxSize": self.maxSize,
         }

@@ -44,8 +44,6 @@ def make_queue(guild, players=None, max_size=6):
         guild=guild,
         channels=[channel],
         points={},
-        players={},
-        gamesPlayed=0,
         maxSize=max_size,
     )
     for player in players or []:

@@ -14,6 +14,7 @@ from sixMans.embeds import GreenEmbed
 from sixMans.enums import GameMode, GameState, Winner
 from sixMans.queue import SixMansQueue
 from sixMans.strings import Strings
+from sixMans.types import PlayerStats
 from sixMans.views.captains import CaptainsView
 from sixMans.views.selfpick import SelfPickingView
 from sixMans.views.vote import GameModeVote
@@ -56,9 +57,12 @@ class Game:
         voice_channels: list[discord.VoiceChannel] | None = None,
         winner: Winner = Winner.PENDING,
         save_callback: Callable[[], Coroutine[Any, Any, None]] | None = None,
+        stats_lookup: Callable[[int, int], PlayerStats | None] | None = None,
     ):
         # Setup
         self.save_callback = save_callback
+        # (queue id, player id) -> the player's totals in that queue, for balanced team selection
+        self.stats_lookup = stats_lookup
         self.player_votes: dict[discord.Member, int] = {}
         self.reaction_lock = False
 
@@ -433,7 +437,7 @@ class Game:
         wp_total = 0
         # Get each player's "rank" and QWP
         for player in self.players:
-            player_stats = self.queue.get_player_summary(player)
+            player_stats = self.stats_lookup(self.queue.id, player.id) if self.stats_lookup else None
 
             rank = 1  # get_player_rank
             if player_stats:
