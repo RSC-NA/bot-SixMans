@@ -14,6 +14,7 @@ import pytest
 from discord.ext import commands
 
 from sixMans.game import Game
+from sixMans.queues.embeds import queue_info_embed
 
 from .scoreboard_env import DUELS, GENERAL, LEFT_SERVER, build_cog, make_config, make_guild, make_member, scenario
 
@@ -105,7 +106,9 @@ async def collect(cog, ctx, members) -> dict:
         output[f"rank {name} {player} {queue_name}"] = sent(ctx)
     queues = {q.id: q for q in cog.queues[ctx.guild]}
     for queue_id in (GENERAL, DUELS):
-        output[f"queue info {queue_id}"] = {"embed": cog.embed_queue_info(queues[queue_id]).to_dict()}
+        games_played = cog.scoreboard.queue_games_played(ctx.guild, queue_id)
+        unique_players = len(cog.scoreboard.queue_players(ctx.guild, queue_id))
+        output[f"queue info {queue_id}"] = {"embed": queue_info_embed(queues[queue_id], games_played, unique_players).to_dict()}
 
     game = Game(queue=queues[GENERAL], players=[members[p] for p in (1, 2, 7, 8, 9, 15)], stats_lookup=cog._queue_stats_lookup(ctx.guild))
     output["balance scores"] = {str(member.id): data for member, data in sorted(game.get_player_scores().items(), key=lambda kv: kv[0].id)}

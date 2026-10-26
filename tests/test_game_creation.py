@@ -76,7 +76,6 @@ def cog(guild):
     cog._helper_role = AsyncMock(return_value=None)
     cog._get_automove = AsyncMock(return_value=False)
     cog._category = AsyncMock(return_value=None)
-    cog.embed_player_removed = MagicMock(return_value=discord.Embed())
     return cog
 
 
