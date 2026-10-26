@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import datetime
 import logging
-import random
 from collections.abc import Callable
 
 import discord
@@ -36,8 +35,6 @@ log = logging.getLogger("red.sixMans")
 DEBUG = False
 MINIMUM_GAME_TIME = 300  # Seconds (5 Minutes)
 PLAYER_TIMEOUT_TIME = 10 if DEBUG else 1800  # How long players can be in a queue in seconds (4 Hours)
-LOOP_TIME = 5  # How often to check the queues in seconds
-VERIFY_TIMEOUT = 30  # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30  # How long channels will persist after a game's score has been reported (seconds)
 
 
@@ -1449,12 +1446,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
         await asyncio.sleep(time)
         await self._auto_remove_from_queue(player, six_mans_queue)
 
-    async def cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
-        with contextlib.suppress(KeyError):
-            self.timeout_tasks[player][six_mans_queue].cancel()
-
-        await self.remove_timeout_task(player, six_mans_queue)
-
     async def remove_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
         with contextlib.suppress(KeyError):
             del self.timeout_tasks[player][six_mans_queue]
@@ -1585,29 +1576,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
         live.voiceChannels = []
         game.voiceChannels = []
 
-    def _get_opposing_captain(self, player: discord.Member, game: Game):
-        opposing_captain = None
-        if game.state == GameState.NEW:
-            players = list(game.players)
-            if player not in players:
-                return None
-            players.remove(player)
-            return random.choice(players)
-
-        opposing_captain = None
-
-        if player in game.blue:
-            opposing_captain = game.captains[1]  # Orange team captain
-        elif player in game.orange:
-            opposing_captain = game.captains[0]  # Blue team captain
-        return opposing_captain
-
-    def _swap_opposing_captain(self, game: Game, opposing_captain):
-        if opposing_captain in game.blue:
-            game.captains[0] = random.sample(list(game.blue), 1)[0]  # Swap Blue team captain
-        elif opposing_captain in game.orange:
-            game.captains[1] = random.sample(list(game.orange), 1)[0]  # Swap Orange team captain
-
     async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue) -> bool:
         """Pop Queue"""
         if not ctx.guild:
@@ -1725,20 +1693,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
 
         await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
         return None, None
-
-    def is_valid_ts(self, team_selection) -> bool:
-        try:
-            GameMode(team_selection)
-            return True
-        except ValueError:
-            return False
-
-    def get_game_and_queue(self, channel: discord.TextChannel) -> tuple[Game, SixMansQueue] | None:
-        game = self.get_game_by_text_channel(channel)
-        if game:
-            return game, game.queue
-        else:
-            return None
 
     def get_game_by_id(self, guild: discord.Guild, game_id: int) -> Game | None:
         log.debug(f"Fetching Game ID: {game_id}")
