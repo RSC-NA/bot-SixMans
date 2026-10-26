@@ -82,6 +82,7 @@ class CancelView(GameOnlyView):
             cancel_embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
             await safe_edit(self.msg, embed=cancel_embed, view=None)
             self.stop()
+            return
 
         # Update vote
         embed = await self.create_embed()
@@ -107,6 +108,7 @@ class CancelView(GameOnlyView):
             )
             await safe_edit(self.msg, embed=play_embed, view=None)
             self.stop()
+            return
 
         # Update vote
         embed = await self.create_embed()
