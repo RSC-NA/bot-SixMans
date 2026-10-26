@@ -25,9 +25,10 @@ from sixMans.game import Game
 from sixMans.models.game import GameData
 from sixMans.models.queue import QueueData
 from sixMans.queue import SixMansQueue
+from sixMans.scoreboard.stats import filter_scores, give_points, make_score, plan_totals_rebuild, sort_players
 from sixMans.strings import Strings
 from sixMans.types import PlayerScore, PlayerStats, QueueBan, SixMansConfig
-from sixMans.utils import format_score_time, parse_score_time, utc_now
+from sixMans.utils import format_score_time, utc_now
 from sixMans.views.cancel import CancelView, ForceCancelView
 from sixMans.views.score import ForceResultView, ScoreReportView
 
@@ -38,10 +39,6 @@ MINIMUM_GAME_TIME = 300  # Seconds (5 Minutes)
 PLAYER_TIMEOUT_TIME = 10 if DEBUG else 1800  # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5  # How often to check the queues in seconds
 VERIFY_TIMEOUT = 30  # How long someone has to react to a prompt (seconds)
-# Commit 78be65a made `_give_points` drop players it hadn't seen before, so anyone whose first game came after it
-# shipped is missing from (or undercounted in) the stored totals. Production backups show the last new player recorded
-# on 2026-03-16 at 13:48 and none recorded from 15:36 that day on.
-TOTALS_BUG_INTRODUCED = datetime.datetime(2026, 3, 16, 14, 0).astimezone()  # Host local time, like stored scores
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30  # How long channels will persist after a game's score has been reported (seconds)
 
 
@@ -1159,7 +1156,7 @@ class SixMans(commands.Cog):
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
 
     @commands.guild_only()
@@ -1178,7 +1175,7 @@ class SixMans(commands.Cog):
         queue_id = queue.id if queue else None
         queue_name = queue.name if queue else ctx.guild.name
         day_ago = utc_now() - datetime.timedelta(days=1)
-        players, games_played = self._filter_scores(ctx.guild, scores, day_ago, queue_id)
+        players, games_played = filter_scores(scores, day_ago, queue_id, self.queueMaxSize[ctx.guild])
 
         if games_played == 0:
             await ctx.send(f":x: No games have been played in {queue_name}")
@@ -1188,7 +1185,7 @@ class SixMans(commands.Cog):
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
 
     @commands.guild_only()
@@ -1204,7 +1201,7 @@ class SixMans(commands.Cog):
         queue_id = queue.id if queue else None
         queue_name = queue.name if queue else ctx.guild.name
         week_ago = utc_now() - datetime.timedelta(weeks=1)
-        players, games_played = self._filter_scores(ctx.guild, scores, week_ago, queue_id)
+        players, games_played = filter_scores(scores, week_ago, queue_id, self.queueMaxSize[ctx.guild])
 
         if games_played == 0:
             await ctx.send(f":x: No games have been played in {queue_name}")
@@ -1214,7 +1211,7 @@ class SixMans(commands.Cog):
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Weekly"))
 
     @commands.guild_only()
@@ -1230,7 +1227,7 @@ class SixMans(commands.Cog):
         queue_id = queue.id if queue else None
         queue_name = queue.name if queue else ctx.guild.name
         month_ago = utc_now() - datetime.timedelta(days=30)
-        players, games_played = self._filter_scores(ctx.guild, scores, month_ago, queue_id)
+        players, games_played = filter_scores(scores, month_ago, queue_id, self.queueMaxSize[ctx.guild])
 
         if games_played == 0:
             await ctx.send(f":x: No games have been played in {queue_name}")
@@ -1240,7 +1237,7 @@ class SixMans(commands.Cog):
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Monthly"))
 
     @commands.guild_only()
@@ -1256,7 +1253,7 @@ class SixMans(commands.Cog):
         queue_id = queue.id if queue else None
         queue_name = queue.name if queue else ctx.guild.name
         year_ago = utc_now() - datetime.timedelta(days=365)
-        players, games_played = self._filter_scores(ctx.guild, scores, year_ago, queue_id)
+        players, games_played = filter_scores(scores, year_ago, queue_id, self.queueMaxSize[ctx.guild])
 
         if games_played == 0:
             await ctx.send(f":x: No games have been played in {queue_name}")
@@ -1266,7 +1263,7 @@ class SixMans(commands.Cog):
             await ctx.send(f":x: Queue leaderboard not available for {queue_name}")
             return
 
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Yearly"))
 
     # endregion
@@ -1310,7 +1307,7 @@ class SixMans(commands.Cog):
             return
 
         queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         player = player or ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "All-time"))
 
@@ -1335,7 +1332,7 @@ class SixMans(commands.Cog):
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
         day_ago = utc_now() - datetime.timedelta(days=1)
-        players = self._filter_scores(ctx.guild, scores, day_ago, queue_id)[0]
+        players = filter_scores(scores, day_ago, queue_id, self.queueMaxSize[ctx.guild])[0]
         queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
@@ -1343,7 +1340,7 @@ class SixMans(commands.Cog):
             return
 
         queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         player = player or ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Daily"))
 
@@ -1368,7 +1365,7 @@ class SixMans(commands.Cog):
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
         week_ago = utc_now() - datetime.timedelta(weeks=1)
-        players = self._filter_scores(ctx.guild, scores, week_ago, queue_id)[0]
+        players = filter_scores(scores, week_ago, queue_id, self.queueMaxSize[ctx.guild])[0]
         queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
@@ -1376,7 +1373,7 @@ class SixMans(commands.Cog):
             return
 
         queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         player = player or ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Weekly"))
 
@@ -1401,7 +1398,7 @@ class SixMans(commands.Cog):
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
         month_ago = utc_now() - datetime.timedelta(days=30)
-        players = self._filter_scores(ctx.guild, scores, month_ago, queue_id)[0]
+        players = filter_scores(scores, month_ago, queue_id, self.queueMaxSize[ctx.guild])[0]
         queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
@@ -1409,7 +1406,7 @@ class SixMans(commands.Cog):
             return
 
         queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         player = player or ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Monthly"))
 
@@ -1434,7 +1431,7 @@ class SixMans(commands.Cog):
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
         year_ago = utc_now() - datetime.timedelta(days=365)
-        players = self._filter_scores(ctx.guild, scores, year_ago, queue_id)[0]
+        players = filter_scores(scores, year_ago, queue_id, self.queueMaxSize[ctx.guild])[0]
         queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
@@ -1442,7 +1439,7 @@ class SixMans(commands.Cog):
             return
 
         queue_max_size = queue.maxSize if queue else self.queueMaxSize[ctx.guild]
-        sorted_players = self._sort_player_dict(players)
+        sorted_players = sort_players(players)
         player = player or ctx.author
         await ctx.send(embed=self.embed_rank(player, sorted_players, queue_name, queue_max_size, "Yearly"))
 
@@ -1867,14 +1864,14 @@ class SixMans(commands.Cog):
             _games_played = await self._games_played(guild)
             date_time = format_score_time(utc_now())
             for player in winning_players:
-                score = self._create_player_score(six_mans_queue, game, player, 1, date_time)
-                self._give_points(six_mans_queue.players, score)
-                self._give_points(_players, score)
+                score = make_score(six_mans_queue.id, six_mans_queue.points, game.id, player.id, 1, date_time)
+                give_points(six_mans_queue.players, score)
+                give_points(_players, score)
                 _scores.insert(0, score)
             for player in losing_players:
-                score = self._create_player_score(six_mans_queue, game, player, 0, date_time)
-                self._give_points(six_mans_queue.players, score)
-                self._give_points(_players, score)
+                score = make_score(six_mans_queue.id, six_mans_queue.points, game.id, player.id, 0, date_time)
+                give_points(six_mans_queue.players, score)
+                give_points(_players, score)
                 _scores.insert(0, score)
 
             _games_played += 1
@@ -1993,88 +1990,6 @@ class SixMans(commands.Cog):
         elif opposing_captain in game.orange:
             game.captains[1] = random.sample(list(game.orange), 1)[0]  # Swap Orange team captain
 
-    def _give_points(self, players_dict: dict[str, PlayerStats], score: PlayerScore):
-        player_id = score["Player"]
-        points_earned = score["Points"]
-        win = score["Win"]
-
-        player_score = players_dict.setdefault(str(player_id), PlayerStats(Points=0, Wins=0, GamesPlayed=0))
-        player_score["Points"] = player_score["Points"] + points_earned
-        player_score["GamesPlayed"] = player_score["GamesPlayed"] + 1
-        player_score["Wins"] = player_score["Wins"] + win
-
-    def _create_player_score(
-        self,
-        six_mans_queue: SixMansQueue,
-        game: Game,
-        player: discord.Member,
-        win: int,
-        date_time: str,
-    ) -> PlayerScore:
-        points_dict = six_mans_queue.points
-        if win:
-            points_earned = points_dict[Strings.PP_PLAY_KEY] + points_dict[Strings.PP_WIN_KEY]
-        else:
-            points_earned = points_dict[Strings.PP_PLAY_KEY]
-        return PlayerScore(
-            Game=game.id,
-            Queue=six_mans_queue.id,
-            Player=player.id,
-            Win=win,
-            Points=points_earned,
-            DateTime=date_time,
-        )
-
-    def _filter_scores(self, guild, scores, start_date, queue_id):
-        players: dict[str, PlayerStats] = {}
-        games: set[int] = set()
-        legacy_scores = 0
-        for score in scores:
-            date_time = parse_score_time(score["DateTime"])
-            # Scores are stored newest first, so everything after this is older
-            if date_time <= start_date:
-                break
-            if queue_id is None or score["Queue"] == queue_id:
-                self._give_points(players, score)
-                # Queues have different sizes (Duels has 2 rows per game), so count games by id
-                if "Game" in score:
-                    games.add(score["Game"])
-                else:
-                    legacy_scores += 1
-        games_played = len(games) + legacy_scores // self.queueMaxSize[guild]
-        return players, games_played
-
-    def _plan_totals_rebuild(self, stored: dict[str, PlayerStats], scores: list[PlayerScore], queue_id: int | None = None) -> dict[str, PlayerStats]:
-        """Totals rebuilt from score history for players whose stored totals the 78be65a bug lost.
-
-        Stored totals already disagree with score history for some older players for unrelated
-        reasons, so only players whose first game in scope came after TOTALS_BUG_INTRODUCED are
-        considered, and only if their stored totals are missing or show fewer games. Nobody's
-        totals ever go down.
-        """
-        rebuilt: dict[str, PlayerStats] = {}
-        first_played: dict[str, datetime.datetime] = {}
-        parsed: dict[str, datetime.datetime] = {}  # Every player in a game shares its timestamp
-        for score in scores:
-            if queue_id is not None and score["Queue"] != queue_id:
-                continue
-            player_id = str(score["Player"])
-            self._give_points(rebuilt, score)
-            date_time = parsed.get(score["DateTime"])
-            if date_time is None:
-                date_time = parsed[score["DateTime"]] = parse_score_time(score["DateTime"])
-            if player_id not in first_played or date_time < first_played[player_id]:
-                first_played[player_id] = date_time
-
-        changes: dict[str, PlayerStats] = {}
-        for player_id, totals in rebuilt.items():
-            if first_played[player_id] < TOTALS_BUG_INTRODUCED:
-                continue
-            current = stored.get(player_id)
-            if current is None or current["GamesPlayed"] < totals["GamesPlayed"]:
-                changes[player_id] = totals
-        return changes
-
     async def _rebuild_player_totals(self, guild: discord.Guild, apply: bool) -> dict:
         """Plan (and optionally apply) a totals rebuild. Returns every change with its before and after totals."""
         async with self._stats_lock:
@@ -2082,8 +1997,8 @@ class SixMans(commands.Cog):
             players = await self._players(guild)
             queues = self.queues.get(guild, [])
 
-            player_changes = self._plan_totals_rebuild(players, scores)
-            queue_changes = {queue: self._plan_totals_rebuild(queue.players, scores, queue.id) for queue in queues}
+            player_changes = plan_totals_rebuild(players, scores)
+            queue_changes = {queue: plan_totals_rebuild(queue.players, scores, queue.id) for queue in queues}
 
             record = {
                 "server": {pid: {"before": players.get(pid), "after": totals} for pid, totals in player_changes.items()},
@@ -2120,14 +2035,6 @@ class SixMans(commands.Cog):
             lines.append(f"**Server totals:** {describe(record['server'])}")
         lines.extend(f"**{queue['name']}:** {describe(queue['players'])}" for queue in record["queues"].values())
         return "\n".join(lines)
-
-    def _sort_player_dict(self, player_dict):
-        sorted_players = sorted(
-            player_dict.items(),
-            key=lambda x: x[1][Strings.PLAYER_WINS_KEY],
-            reverse=True,
-        )
-        return sorted(sorted_players, key=lambda x: x[1][Strings.PLAYER_POINTS_KEY], reverse=True)
 
     async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue) -> bool:
         """Pop Queue"""

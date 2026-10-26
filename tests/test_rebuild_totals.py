@@ -19,8 +19,9 @@ from redbot.core import Config
 from redbot.core._drivers.json import JsonDriver
 
 from sixMans.enums import Winner
-from sixMans.sixMans import TOTALS_BUG_INTRODUCED, SixMans, defaults
-from sixMans.types import PlayerScore
+from sixMans.scoreboard.stats import TOTALS_BUG_INTRODUCED, give_points, plan_totals_rebuild, sort_players
+from sixMans.sixMans import SixMans, defaults
+from sixMans.types import PlayerScore, PlayerStats
 from sixMans.utils import format_score_time, parse_score_time
 
 from .test_game_teardown import build_game, make_member
@@ -39,19 +40,12 @@ def score(player: int, days: float, win: int = 1, queue: int = GENERAL) -> Playe
     return PlayerScore(Game=1, Queue=queue, Player=player, Win=win, Points=3 if win else 1, DateTime=at(days))
 
 
-def totals(points: int, wins: int, games: int) -> dict:
-    return {"Points": points, "Wins": wins, "GamesPlayed": games}
+def totals(points: int, wins: int, games: int) -> PlayerStats:
+    return PlayerStats(Points=points, Wins=wins, GamesPlayed=games)
 
 
 def newest_first(scores: list[PlayerScore]) -> list[PlayerScore]:
     return sorted(scores, key=lambda s: parse_score_time(s["DateTime"]), reverse=True)
-
-
-@pytest.fixture
-def plain_cog():
-    with patch("sixMans.sixMans.Config.get_conf") as mock_conf, patch("sixMans.sixMans.asyncio.create_task"):
-        mock_conf.return_value.register_guild = MagicMock()
-        return SixMans(MagicMock())
 
 
 # ---------------------------------------------------------------------------
@@ -60,58 +54,58 @@ def plain_cog():
 
 
 class TestPlanTotalsRebuild:
-    def test_missing_player_who_started_after_the_bug_is_added(self, plain_cog):
+    def test_missing_player_who_started_after_the_bug_is_added(self):
         scores = [score(1, AFTER + 1, win=0), score(1, AFTER)]
-        assert plain_cog._plan_totals_rebuild({}, scores) == {"1": totals(4, 1, 2)}
+        assert plan_totals_rebuild({}, scores) == {"1": totals(4, 1, 2)}
 
-    def test_partial_totals_from_after_the_fix_are_replaced(self, plain_cog):
+    def test_partial_totals_from_after_the_fix_are_replaced(self):
         """A player missed by the bug gets an entry for their first game after the fix, but nothing before it."""
         scores = [score(1, AFTER + 2), score(1, AFTER + 1, win=0), score(1, AFTER)]
-        assert plain_cog._plan_totals_rebuild({"1": totals(3, 1, 1)}, scores) == {"1": totals(7, 2, 3)}
+        assert plan_totals_rebuild({"1": totals(3, 1, 1)}, scores) == {"1": totals(7, 2, 3)}
 
-    def test_player_who_started_before_the_bug_is_never_touched(self, plain_cog):
+    def test_player_who_started_before_the_bug_is_never_touched(self):
         """Stored totals already disagree with history for older players. Those aren't ours to change."""
         scores = [score(1, AFTER), score(1, BEFORE), score(2, AFTER), score(2, BEFORE)]
         stored = {"1": totals(3, 1, 1)}  # Fewer games than history, and player 2 is missing entirely
-        assert plain_cog._plan_totals_rebuild(stored, scores) == {}
+        assert plan_totals_rebuild(stored, scores) == {}
 
     @pytest.mark.parametrize("stored", [totals(3, 1, 1), totals(50, 20, 30), totals(0, 0, 1)])
-    def test_never_lowers_or_rewrites_totals_with_as_many_games(self, plain_cog, stored):
+    def test_never_lowers_or_rewrites_totals_with_as_many_games(self, stored):
         scores = [score(1, AFTER)]
-        assert plain_cog._plan_totals_rebuild({"1": stored}, scores) == {}
+        assert plan_totals_rebuild({"1": stored}, scores) == {}
 
-    def test_first_game_exactly_at_the_cutoff_counts_as_after(self, plain_cog):
+    def test_first_game_exactly_at_the_cutoff_counts_as_after(self):
         scores = [score(1, 0)]
-        assert plain_cog._plan_totals_rebuild({}, scores) == {"1": totals(3, 1, 1)}
+        assert plan_totals_rebuild({}, scores) == {"1": totals(3, 1, 1)}
 
-    def test_first_game_just_before_the_cutoff_counts_as_before(self, plain_cog):
+    def test_first_game_just_before_the_cutoff_counts_as_before(self):
         scores = [score(1, -1 / 86400)]
-        assert plain_cog._plan_totals_rebuild({}, scores) == {}
+        assert plan_totals_rebuild({}, scores) == {}
 
-    def test_first_game_does_not_depend_on_score_order(self, plain_cog):
+    def test_first_game_does_not_depend_on_score_order(self):
         scores = [score(1, BEFORE), score(1, AFTER), score(2, AFTER), score(2, AFTER + 1)]
         for _ in range(10):
             random.shuffle(scores)
-            assert plain_cog._plan_totals_rebuild({}, scores) == {"2": totals(6, 2, 2)}
+            assert plan_totals_rebuild({}, scores) == {"2": totals(6, 2, 2)}
 
-    def test_queue_scope_only_counts_that_queues_games(self, plain_cog):
+    def test_queue_scope_only_counts_that_queues_games(self):
         """An established General player who first tried Lower after the bug is missing from Lower only."""
         scores = [score(1, AFTER, queue=LOWER), score(1, AFTER, queue=GENERAL), score(1, BEFORE, queue=GENERAL)]
 
-        assert plain_cog._plan_totals_rebuild({}, scores, LOWER) == {"1": totals(3, 1, 1)}
-        assert plain_cog._plan_totals_rebuild({}, scores, GENERAL) == {}
-        assert plain_cog._plan_totals_rebuild({}, scores) == {}
+        assert plan_totals_rebuild({}, scores, LOWER) == {"1": totals(3, 1, 1)}
+        assert plan_totals_rebuild({}, scores, GENERAL) == {}
+        assert plan_totals_rebuild({}, scores) == {}
 
-    def test_scores_from_before_game_ids_were_recorded(self, plain_cog):
+    def test_scores_from_before_game_ids_were_recorded(self):
         legacy = cast(PlayerScore, {k: v for k, v in score(1, AFTER).items() if k != "Game"})
-        assert plain_cog._plan_totals_rebuild({}, [legacy]) == {"1": totals(3, 1, 1)}
+        assert plan_totals_rebuild({}, [legacy]) == {"1": totals(3, 1, 1)}
 
-    def test_does_not_modify_its_inputs(self, plain_cog):
+    def test_does_not_modify_its_inputs(self):
         scores = [score(1, AFTER), score(2, AFTER)]
         stored = {"2": totals(3, 1, 1)}
         scores_before, stored_before = copy.deepcopy(scores), copy.deepcopy(stored)
 
-        plain_cog._plan_totals_rebuild(stored, scores)
+        plan_totals_rebuild(stored, scores)
 
         assert scores == scores_before
         assert stored == stored_before
@@ -292,7 +286,7 @@ class TestRebuildPlayerTotals:
         record = await cog._rebuild_player_totals(guild, apply=True)
         snapshot = copy.deepcopy(record)
 
-        cog._give_points(cog.queues[guild][0].players, score(4, AFTER + 5))
+        give_points(cog.queues[guild][0].players, score(4, AFTER + 5))
 
         assert record == snapshot
 
@@ -318,7 +312,7 @@ class TestRebuildPlayerTotals:
     async def test_leaderboards_use_rebuilt_totals(self, cog, guild):
         await cog._rebuild_player_totals(guild, apply=True)
 
-        sorted_players = cog._sort_player_dict(await cog._players(guild))
+        sorted_players = sort_players(await cog._players(guild))
 
         assert [pid for pid, _ in sorted_players] == ["6", "4", "2", "1", "3", "5"]
 
