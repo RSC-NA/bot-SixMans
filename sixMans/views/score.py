@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.enums import Winner
-from sixMans.views import AuthorOnlyView, safe_edit
+from sixMans.views import AuthorOnlyView, SerialEditView, safe_edit
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("red.sixMans.views.score")
 
 
-class ScoreReportView(discord.ui.View):
+class ScoreReportView(SerialEditView):
     """Discord view for reporting a game score"""
 
     def __init__(self, game: "Game"):
@@ -23,7 +23,6 @@ class ScoreReportView(discord.ui.View):
         self.answers: dict[discord.Member, Winner] = {}
         self.result = Winner.PENDING
         self.cancelled = False
-        self.msg: discord.Message | None = None
 
         for c in self.captains:
             self.answers[c] = Winner.PENDING
@@ -33,6 +32,7 @@ class ScoreReportView(discord.ui.View):
         captains_mention = " ".join(c.mention for c in self.captains)
         if not self.channel:
             log.error(f"No text channel found for game {self.game.id}. Cannot prompt score report.")
+            self.stop()
             return
         self.msg = await self.channel.send(content=captains_mention, embed=self.embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -55,53 +55,31 @@ class ScoreReportView(discord.ui.View):
                 colour=discord.Colour.yellow(),
             )
 
-            await safe_edit(self.msg, embed=embed, view=None)
+            await self.update_message(final=True, embed=embed, view=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is a game captain"""
         if not isinstance(interaction.user, discord.Member):
             return False
         if interaction.user not in self.captains:
+            await interaction.response.send_message("Only the game captains can report the score.", ephemeral=True)
             return False
         return True
 
     @discord.ui.button(label="Blue", style=discord.ButtonStyle.blurple)
     async def report_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not isinstance(interaction.user, discord.Member):
-            return
-
-        if await self.already_answered(interaction.user):
-            await interaction.response.send_message(
-                "You have already selected a winner. Please cancel the report if you made a mistake.",
-                ephemeral=True,
-            )
-            return
-
-        # Update Embed
-        self.answers[interaction.user] = Winner.BLUE
-        await self.update_embed()
-        await safe_edit(self.msg, embed=self.embed, view=self)
-
-        if not await self.both_captains_reported():
-            await interaction.response.defer(thinking=False, ephemeral=True)
-            return
-
-        if not await self.unanimous_vote():
-            embed = discord.Embed(
-                title="Score Report",
-                description="The captains did not select a winner unanimously. Please try again...",
-                color=discord.Color.red(),
-            )
-            await safe_edit(self.msg, embed=embed, view=None)
-            self.stop()
-            return
-
-        # Finish and display winner
-        await self.display_winner()
+        await self.record_answer(interaction, Winner.BLUE)
 
     @discord.ui.button(label="Orange", style=discord.ButtonStyle.green)
     async def report_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.record_answer(interaction, Winner.ORANGE)
+
+    async def record_answer(self, interaction: discord.Interaction, winner: Winner):
         if not isinstance(interaction.user, discord.Member):
+            return
+
+        if self.is_finished():
+            await interaction.response.send_message("This score report has already ended.", ephemeral=True)
             return
 
         if await self.already_answered(interaction.user):
@@ -111,51 +89,26 @@ class ScoreReportView(discord.ui.View):
             )
             return
 
-        # Update Embed
-        self.answers[interaction.user] = Winner.ORANGE
-        await self.update_embed()
-        await safe_edit(self.msg, embed=self.embed, view=self)
+        self.answers[interaction.user] = winner
+        await interaction.response.defer()
+
+        # Both captains can answer at once. Whichever resumes first settles the report.
+        if self.is_finished():
+            return
 
         if not await self.both_captains_reported():
-            await interaction.response.defer(thinking=False, ephemeral=True)
+            await self.update_embed()
+            await self.update_message(embed=self.embed, view=self)
             return
 
         if not await self.unanimous_vote():
+            self.stop()
             embed = discord.Embed(
                 title="Score Report",
                 description="The captains did not select a winner unanimously. Please try again...",
                 color=discord.Color.red(),
             )
-            await safe_edit(self.msg, embed=embed, view=None)
-            self.stop()
-            return
-
-        # Finish and display winner
-        await self.display_winner()
-
-    async def captains_report(self, member: discord.Member, winner: Winner):
-        if member not in self.captains:
-            return
-
-        if await self.already_answered(member):
-            return
-
-        # Update Embed
-        self.answers[member] = winner
-        await self.update_embed()
-        await safe_edit(self.msg, embed=self.embed, view=self)
-
-        if not await self.both_captains_reported():
-            return
-
-        if not await self.unanimous_vote():
-            embed = discord.Embed(
-                title="Score Report",
-                description="The captains did not select a winner unanimously. Please try again...",
-                color=discord.Color.red(),
-            )
-            await safe_edit(self.msg, embed=embed, view=None)
-            self.stop()
+            await self.update_message(final=True, embed=embed, view=None)
             return
 
         # Finish and display winner
@@ -166,15 +119,20 @@ class ScoreReportView(discord.ui.View):
         if not isinstance(interaction.user, discord.Member):
             return
 
+        if self.is_finished():
+            await interaction.response.send_message("This score report has already ended.", ephemeral=True)
+            return
+
         self.cancelled = True
+        self.stop()
+        await interaction.response.defer()
 
         embed = discord.Embed(
             title="Score Report Cancelled",
             description=f"{interaction.user.mention} has cancelled score reporting.",
             color=discord.Color.red(),
         )
-        await safe_edit(self.msg, embed=embed, view=None)
-        self.stop()
+        await self.update_message(final=True, embed=embed, view=None)
 
     async def unanimous_vote(self) -> bool:
         # Fail if a vote has not been cast
@@ -196,6 +154,7 @@ class ScoreReportView(discord.ui.View):
 
     async def display_winner(self):
         self.result = next(iter(self.answers.values()))
+        self.stop()
         embed = discord.Embed(
             title="Game Finished",
             description=f"**{self.result}** has been recorded as the winner of this game. Thanks for playing!",
@@ -203,8 +162,7 @@ class ScoreReportView(discord.ui.View):
         )
 
         embed.set_footer(text="This channel and the team voice channels will be deleted in 30 seconds.")
-        await safe_edit(self.msg, embed=embed, view=None)
-        self.stop()
+        await self.update_message(final=True, embed=embed, view=None)
 
 
 class ForceResultView(AuthorOnlyView):
@@ -232,20 +190,21 @@ class ForceResultView(AuthorOnlyView):
 
     @discord.ui.button(label="Blue", style=discord.ButtonStyle.gray, emoji=chr(0x1F535))
     async def report_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not isinstance(interaction.user, discord.Member):
-            return
-
-        self.result = Winner.BLUE
-
-        # Finish and display winner
-        await self.display_winner()
+        await self.select_winner(interaction, Winner.BLUE)
 
     @discord.ui.button(label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0))
     async def report_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not isinstance(interaction.user, discord.Member):
+        await self.select_winner(interaction, Winner.ORANGE)
+
+    async def select_winner(self, interaction: discord.Interaction, winner: Winner):
+        # A double click can dispatch a second press before the first one stops the view
+        if self.is_finished():
+            await interaction.response.defer()
             return
 
-        self.result = Winner.ORANGE
+        self.result = winner
+        self.stop()
+        await interaction.response.defer()
 
         # Finish and display winner
         await self.display_winner()
@@ -255,7 +214,13 @@ class ForceResultView(AuthorOnlyView):
         if not isinstance(interaction.user, discord.Member):
             return
 
+        if self.is_finished():
+            await interaction.response.defer()
+            return
+
         self.cancelled = True
+        self.stop()
+        await interaction.response.defer()
 
         embed = discord.Embed(
             title="Score Report Cancelled",
@@ -263,7 +228,6 @@ class ForceResultView(AuthorOnlyView):
             color=discord.Color.red(),
         )
         await safe_edit(self.msg, embed=embed, view=None)
-        self.stop()
 
     async def display_winner(self):
         embed = discord.Embed(

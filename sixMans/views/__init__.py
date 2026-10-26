@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -28,6 +29,31 @@ async def safe_edit(msg: discord.Message | None, **kwargs) -> None:
         log.warning(f"Unable to edit message {msg.id}: {exc}")
 
 
+class SerialEditView(discord.ui.View):
+    """A view whose message several people update at once.
+
+    discord.py runs each button press in its own task, so presses overlap and their edits can
+    reach Discord out of order. An older tally could land after the final result and put back
+    buttons that no longer work. `update_message()` sends edits one at a time, in the order they
+    were requested, and drops a tally once the view has finished.
+
+    Callbacks acknowledge the interaction before calling it. Waiting on the lock and the edit can
+    otherwise take a press past Discord's 3 second limit, which shows "This interaction failed".
+    """
+
+    def __init__(self, timeout: float | None = 180.0):
+        super().__init__(timeout=timeout)
+        self.msg: discord.Message | None = None
+        self._edit_lock = asyncio.Lock()
+
+    async def update_message(self, *, final: bool = False, **kwargs) -> None:
+        """Edit the view's message. A tally (not `final`) is skipped once the view has finished."""
+        async with self._edit_lock:
+            if self.is_finished() and not final:
+                return
+            await safe_edit(self.msg, **kwargs)
+
+
 class AuthorOnlyView(discord.ui.View):
     """View class designed to only interact with the interaction author"""
 
@@ -50,18 +76,17 @@ class AuthorOnlyView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is the author. Allow or deny callbacks"""
         if interaction.user != self.author:
+            await interaction.response.send_message(content=f"Only {self.author.display_name} can use these buttons.", ephemeral=True)
             return False
         return True
 
 
-class GameOnlyView(discord.ui.View):
+class GameOnlyView(SerialEditView):
     """View class designed to only interact with the game players"""
 
     def __init__(self, game: "Game", timeout: float = 60.0):
-        super().__init__()
-        self.timeout = timeout
+        super().__init__(timeout=timeout)
         self.game = game
-        self.msg: discord.Message | None = None
 
     async def on_timeout(self):
         """Display time out message if we have reference to original"""
@@ -71,7 +96,7 @@ class GameOnlyView(discord.ui.View):
             colour=discord.Colour.yellow(),
         )
 
-        await safe_edit(self.msg, embed=embed, view=None)
+        await self.update_message(final=True, embed=embed, view=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if the interaction user is the author. Allow or deny callbacks"""
@@ -80,6 +105,7 @@ class GameOnlyView(discord.ui.View):
 
         if interaction.user in self.game.players:
             return True
+        await interaction.response.send_message(content="You are not an active player in this game...", ephemeral=True)
         return False
 
 

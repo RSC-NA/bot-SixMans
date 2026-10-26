@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.enums import GameMode
-from sixMans.views import safe_edit
+from sixMans.views import SerialEditView
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("red.sixMans.views.vote")
 
 
-class GameModeVote(discord.ui.View):
+class GameModeVote(SerialEditView):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=900.0)
         self.channel: discord.TextChannel | None = game.textChannel
@@ -23,7 +23,6 @@ class GameModeVote(discord.ui.View):
         self.result: GameMode | None = None
         self.votes: dict = GameMode.to_dict()
         self.size = len(game.players)
-        self.msg: discord.Message | None = None
         log.debug(f"Starting game mode vote: {self.channel}")
 
     async def start(self):
@@ -82,6 +81,10 @@ class GameModeVote(discord.ui.View):
             await interaction.response.defer()
             return
 
+        if self.is_finished():
+            await interaction.response.send_message(content="Voting has already ended.", ephemeral=True)
+            return
+
         log.debug(f"Interaction Data Type: {type(interaction.data)}")
         mode = GameMode(interaction.data["custom_id"])  # type: ignore
         log.debug(f"{interaction.user} vote: {mode}")
@@ -106,14 +109,16 @@ class GameModeVote(discord.ui.View):
             inline=True,
         )
 
-        if self.vote_finished:
+        finished = self.vote_finished
+        if finished:
             log.debug("Game mode vote Finished.")
             self.stop()
-            await safe_edit(self.msg, embed=self.embed, view=None)
 
-        # Defer interaction and update embed
         await interaction.response.defer()
-        await safe_edit(self.msg, embed=self.embed)
+        if finished:
+            await self.update_message(final=True, embed=self.embed, view=None)
+        else:
+            await self.update_message(embed=self.embed)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only players in this game may vote."""
@@ -151,7 +156,7 @@ class GameModeVote(discord.ui.View):
             description=f"Vote timed out. **{result.value}** has been selected.",
             color=discord.Color.yellow(),
         )
-        await safe_edit(self.msg, embed=embed, view=None)
+        await self.update_message(final=True, embed=embed, view=None)
 
     @property
     def vote_finished(self) -> bool:

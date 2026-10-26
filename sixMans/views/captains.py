@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans import utils
-from sixMans.views import safe_edit
+from sixMans.views import SerialEditView
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("red.sixMans.views.captains")
 
 
-class CaptainsView(discord.ui.View):
+class CaptainsView(SerialEditView):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=None)
         self.channel: discord.TextChannel | None = game.textChannel
@@ -125,6 +125,10 @@ class CaptainsView(discord.ui.View):
             await interaction.response.send_message(content="Only captains can pick players.", ephemeral=True)
             return
 
+        if self.is_finished():
+            await interaction.response.send_message(content="Teams have already been picked.", ephemeral=True)
+            return
+
         # Check which captain is picking
         if interaction.user != self.picking:
             await interaction.response.send_message(content="It's not your turn to pick. Please wait...", ephemeral=True)
@@ -217,13 +221,14 @@ class CaptainsView(discord.ui.View):
 
         if len(self.pickable) == 0:
             log.debug("Captains have finished selecting teams.")
-            await safe_edit(self.msg, embed=self.embed, view=None)
             self.finished = True
             self.stop()
-        else:
-            await safe_edit(self.msg, embed=self.embed, view=self)
 
-        await interaction.response.defer(thinking=False, ephemeral=True)
+        await interaction.response.defer()
+        if self.finished:
+            await self.update_message(final=True, embed=self.embed, view=None)
+        else:
+            await self.update_message(embed=self.embed, view=self)
 
     async def update_embed(self):
         if len(self.pickable) == 0:

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from sixMans.utils import get_emoji
-from sixMans.views import safe_edit
+from sixMans.views import SerialEditView
 
 if TYPE_CHECKING:
     from sixMans.game import Game
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("red.sixMans.views.selfpick")
 
 
-class SelfPickingView(discord.ui.View):
+class SelfPickingView(SerialEditView):
     def __init__(self, game: "Game", helper: discord.Role | None = None):
         super().__init__(timeout=None)
         self.channel: discord.TextChannel | None = game.textChannel
@@ -94,52 +94,38 @@ class SelfPickingView(discord.ui.View):
 
     @discord.ui.button(label="Blue", style=discord.ButtonStyle.blurple, emoji=chr(0x1F535))
     async def pick_blue(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not isinstance(interaction.user, discord.Member):
-            return
-
-        if await self.player_on_team(interaction.user):
-            await interaction.response.send_message("You are already on a team...", ephemeral=True)
-            return
-
-        if len(self.blue) >= self.team_size:
-            await interaction.response.send_message("Blue team is already full.", ephemeral=True)
-            return
-
-        self.blue.append(interaction.user)
-        self.unplaced.remove(interaction.user)
-        await self.update_embed()
-
-        if len(self.unplaced) == 0:
-            await safe_edit(self.msg, embed=self.embed, view=None)
-            self.finished = True
-            self.stop()
-        else:
-            await safe_edit(self.msg, embed=self.embed, view=self)
-
-        await interaction.response.defer(thinking=False, ephemeral=True)
+        await self.join_team(interaction, self.blue, "Blue")
 
     @discord.ui.button(label="Orange", style=discord.ButtonStyle.gray, emoji=chr(0x1F7E0))
     async def pick_orange(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.join_team(interaction, self.orange, "Orange")
+
+    async def join_team(self, interaction: discord.Interaction, team: list[discord.Member], team_name: str):
         if not isinstance(interaction.user, discord.Member):
+            return
+
+        if self.is_finished():
+            await interaction.response.send_message("Teams have already been picked.", ephemeral=True)
             return
 
         if await self.player_on_team(interaction.user):
             await interaction.response.send_message("You are already on a team...", ephemeral=True)
             return
 
-        if len(self.orange) >= self.team_size:
-            await interaction.response.send_message("Orange team is already full.", ephemeral=True)
+        if len(team) >= self.team_size:
+            await interaction.response.send_message(f"{team_name} team is already full.", ephemeral=True)
             return
 
-        self.orange.append(interaction.user)
+        team.append(interaction.user)
         self.unplaced.remove(interaction.user)
         await self.update_embed()
 
         if len(self.unplaced) == 0:
-            await safe_edit(self.msg, embed=self.embed, view=None)
             self.finished = True
             self.stop()
-        else:
-            await safe_edit(self.msg, embed=self.embed, view=self)
 
-        await interaction.response.defer(thinking=False, ephemeral=True)
+        await interaction.response.defer()
+        if self.finished:
+            await self.update_message(final=True, embed=self.embed, view=None)
+        else:
+            await self.update_message(embed=self.embed, view=self)
