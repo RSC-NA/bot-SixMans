@@ -54,7 +54,7 @@ class QueueCommands(QueueState):
         queue_channels = []
         for c in channels:
             if not isinstance(c, discord.TextChannel):
-                return ctx.send(embed=ErrorEmbed(description=f"{c} is not a valid text channel."))
+                return await ctx.send(embed=ErrorEmbed(description=f"{c} is not a valid text channel."))
             if self.get_queue_by_text_channel(c):
                 return await ctx.send(embed=ErrorEmbed(description=f"{c.mention} is attached to another queue."))
             queue_channels.append(c)
