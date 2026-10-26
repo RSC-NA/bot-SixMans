@@ -98,6 +98,9 @@ async def test_overlapping_cancel_and_play_votes_settle_once():
     """With 2-2 votes, a third cancel and a third play out landing together must not both win."""
     players = [make_member(f"P{i}", i) for i in range(1, 7)]
     view = CancelView(game=as_game(FakeGame(players=players)))
+    # A majority can't be reached by both sides at once, so use a threshold that can, to
+    # exercise the case where two presses each settle the vote
+    view.required_votes = 3
     await view.prompt()
     for player in players[:2]:
         await view.confirm.callback(make_interaction(player))

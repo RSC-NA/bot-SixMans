@@ -132,9 +132,9 @@ Aliases: `cg`
 
 Vote to cancel the game in this channel. Posts a **Cancel** / **Play Out**
 button pair that only players in the game can use, with a 60-second timeout.
-Required votes are half the player count (3 of 6 in a standard game; 2 if the
-game has exactly 2 players, 1 if fewer). Whichever side reaches that count first
-decides the outcome. A cancelled game awards no points, players may queue again,
+Required votes are a majority of the players (4 of 6 in a standard game, 3 of 4,
+2 of 2), so one team can't decide the vote alone. Whichever side reaches that
+count first decides the outcome. If neither does, the vote times out. A cancelled game awards no points, players may queue again,
 and the game's channels are deleted after 30 seconds.
 
 Limited to one concurrent invocation per channel.

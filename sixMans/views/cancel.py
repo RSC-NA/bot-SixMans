@@ -21,13 +21,8 @@ class CancelView(GameOnlyView):
         self.channel = game.textChannel
         self.result = False
 
-        # Calculate required votes
-        if len(self.game.players) < 2:
-            self.required_votes = 1
-        elif len(self.game.players) == 2:
-            self.required_votes = 2
-        else:
-            self.required_votes = int(len(self.game.players) / 2)
+        # A majority, so in a 2v2 or 3v3 one team can't settle the vote alone
+        self.required_votes = len(self.game.players) // 2 + 1
         log.debug(f"Required votes for cancel: {self.required_votes}")
 
         # Initialize votes to `None`
