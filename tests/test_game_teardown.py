@@ -6,6 +6,7 @@ because nothing stopped `_finish_game` from running twice for one game. The seco
 damaging one: it awarded a full set of points before the exception surfaced.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
@@ -251,6 +252,48 @@ class TestFinishGame:
         assert cog.scoreboard.queue_games_played(guild, live_queue.id) == 1
         # Winners get the live queue's 1 + 3 points, not the stale 100 + 300
         assert {s["Points"] for s in await cog.scoreboard.scores(guild)} == {1, 4}
+
+    async def test_overlapping_reports_score_once(self, cog, guild, queue, players):
+        """`!sr` and `!fr` finishing together must not both score the game.
+
+        The game stays in the active list until scoring is done, so a second report used to pass
+        the "still active" check while the first one was awaiting `record_game`.
+        """
+        game = build_game(queue, players, game_id=42)
+        cog.games[guild] = [game]
+        record_game = cog.scoreboard.record_game
+
+        async def slow_record_game(*args, **kwargs):
+            await asyncio.sleep(0)
+            await record_game(*args, **kwargs)
+
+        with (
+            patch("sixMans.games.lifecycle.asyncio.sleep", new=AsyncMock()),
+            patch.object(cog.scoreboard, "record_game", new=slow_record_game),
+        ):
+            await asyncio.gather(
+                cog._finish_game(guild, game, queue, Winner.BLUE),
+                cog._finish_game(guild, game, queue, Winner.ORANGE),
+            )
+
+        assert cog.scoreboard.queue_games_played(guild, queue.id) == 1
+        assert len(await cog.scoreboard.scores(guild)) == len(players)
+
+    async def test_report_winner_completes_game_before_awaiting(self, queue, players):
+        """A competing report resuming during the embed edit must already see the game complete."""
+        game = build_game(queue, players, game_id=42)
+        state_during_edit = []
+
+        async def record_state(**kwargs):
+            state_during_edit.append(game.state)
+
+        game.info_message = MagicMock(spec=discord.Message)
+        game.info_message.embeds = [discord.Embed()]
+        game.info_message.edit = AsyncMock(side_effect=record_state)
+
+        await game.report_winner(Winner.BLUE)
+
+        assert state_during_edit == [GameState.COMPLETE]
 
 
 # ---------------------------------------------------------------------------

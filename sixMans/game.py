@@ -74,6 +74,8 @@ class Game:
         # Bumped each time team selection starts. A selection parked in a view
         # compares against it after `wait()` to learn it was replaced by `fts`.
         self.selection_round: int = 0
+        # Set by the first `_finish_game()` to reach this game, so a racing report can't score it twice
+        self.result_claimed: bool = False
 
         # Core
         self.id = id or uuid.uuid4().int
@@ -504,9 +506,11 @@ class Game:
         return scores
 
     async def report_winner(self, winner: Winner):
+        # Mark the game complete before the edit below yields, so a competing report that resumes
+        # in the meantime fails `revalidate_game()` instead of overwriting the winner.
         self.winner = winner
-        await self.color_embed_for_winners(winner)
         self.state = GameState.COMPLETE
+        await self.color_embed_for_winners(winner)
 
     # Embeds & Emojis
     async def send_game_info(self):

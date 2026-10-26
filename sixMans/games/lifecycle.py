@@ -217,12 +217,17 @@ class GameLifecycle:
     ):
         # Scoring is not idempotent: every call inserts a fresh score row per player and bumps
         # GamesPlayed. Two reports racing for the same game (two `!sr` prompts, or `!sr` against
-        # `!fr`) would silently double credit everyone, so only the call that still sees the game
-        # in the active list is allowed through.
+        # `!fr`) would silently double credit everyone, so only the first call to reach the live
+        # game is allowed through. It claims the game before its first await; the game stays in
+        # the active list until scoring is done, so being listed alone doesn't prove nobody has.
         live = self.get_game_by_id(guild, game.id)
         if live is None:
             log.warning(f"[{guild.name}] Refusing to finish game {game.id}. It is no longer an active game.")
             return
+        if live.result_claimed:
+            log.warning(f"[{guild.name}] Refusing to finish game {game.id}. Another report is already scoring it.")
+            return
+        live.result_claimed = True
         if live is not game:
             log.info(f"[{guild.name}] Game {game.id} was reloaded mid-report. Scoring the live object.")
             game = live
