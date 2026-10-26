@@ -415,7 +415,7 @@ def answer(ctx, yes: bool | None):
 
 
 async def run_command(cog, ctx):
-    with patch("sixMans.sixMans.start_adding_reactions"), patch("sixMans.sixMans.ReactionPredicate.yes_or_no", return_value=MagicMock()):
+    with patch("sixMans.scoreboard.commands.start_adding_reactions"), patch("sixMans.scoreboard.commands.ReactionPredicate.yes_or_no", return_value=MagicMock()):
         await cog.rebuildPlayerTotals.callback(cog, ctx)
 
 

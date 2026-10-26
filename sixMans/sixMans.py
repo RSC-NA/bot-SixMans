@@ -7,9 +7,8 @@ from collections.abc import Callable
 import discord
 from discord.ext.commands import Context
 from redbot.core import Config, checks, commands
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
 
+from sixMans.constants import CHANNEL_SLEEP_TIME, MINIMUM_GAME_TIME, PLAYER_TIMEOUT_TIME
 from sixMans.embeds import (
     BlueEmbed,
     ErrorEmbed,
@@ -25,18 +24,13 @@ from sixMans.models.queue import QueueData
 from sixMans.queue import SixMansQueue
 from sixMans.scoreboard.commands import ScoreboardCommands
 from sixMans.scoreboard.scoreboard import Scoreboard
+from sixMans.settings.commands import SettingsCommands
 from sixMans.strings import Strings
 from sixMans.types import PlayerStats, QueueBan, SixMansConfig
 from sixMans.views.cancel import CancelView, ForceCancelView
 from sixMans.views.score import ForceResultView, ScoreReportView
 
 log = logging.getLogger("red.sixMans")
-
-DEBUG = False
-MINIMUM_GAME_TIME = 300  # Seconds (5 Minutes)
-PLAYER_TIMEOUT_TIME = 10 if DEBUG else 1800  # How long players can be in a queue in seconds (4 Hours)
-CHANNEL_SLEEP_TIME = 5 if DEBUG else 30  # How long channels will persist after a game's score has been reported (seconds)
-
 
 defaults = SixMansConfig(
     CategoryChannel=None,
@@ -59,7 +53,7 @@ defaults = SixMansConfig(
 )
 
 
-class SixMans(ScoreboardCommands, commands.Cog):
+class SixMans(SettingsCommands, ScoreboardCommands, commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
@@ -172,35 +166,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
     # region commands
 
     # region admin commands
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def clearSixMansData(self, ctx: Context):
-        if not ctx.guild:
-            return
-
-        msg = await ctx.send(f"{ctx.author.mention} Please verify that you wish to clear **all** of the {self.queueMaxSize[ctx.guild]} Mans data for the guild.")
-        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
-
-        pred = ReactionPredicate.yes_or_no(msg, ctx.author)  # ty: ignore[invalid-argument-type]  # Member.bot is a read-only property; discord.abc.User declares it writable
-        await ctx.bot.wait_for("reaction_add", check=pred)
-        if pred.result:
-            # await self.config.clear_all_guilds()
-            await self._clear_all_data(ctx.guild)
-            await ctx.send("Done")
-        else:
-            await ctx.send(":x: Data **not** cleared.")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def preLoadData(self, ctx: Context):
-        """Reloads all data for the 6mans cog"""
-        await self._load_guild_data()
-        await self._load_scoreboard()
-        await self._load_queues()
-        await self._load_games()
-        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
@@ -351,75 +316,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
         )
 
     @commands.guild_only()
-    @commands.command(aliases=["setQTimeout", "setQTO", "sqto"])
-    @checks.admin_or_permissions()
-    async def setQueueTimeout(self, ctx: Context, minutes: int):
-        """Sets the player timeout in seconds for queues in the guild (Default: 30m) ."""
-        if not ctx.guild:
-            return
-
-        seconds = minutes * 60
-        await self._save_player_timeout(ctx.guild, seconds)
-        self.player_timeout_time[ctx.guild] = seconds
-        s_if_plural = "" if minutes == 1 else "s"
-        await ctx.send(
-            embed=BlueEmbed(
-                title="Queue Timeout",
-                description=f"Players in Six Mans Queues will now be timed out after **{minutes} minute{s_if_plural}**.",
-            )
-        )
-
-    @commands.guild_only()
-    @commands.command(aliases=["getQTO", "gqto", "qto"])
-    async def getQueueTimeout(self, ctx: Context):
-        """Gets the player timeout in minutes for queues in the guild (Default: 240)."""
-        if not ctx.guild:
-            return
-
-        seconds = await self._player_timeout(ctx.guild)
-        minutes = seconds // 60
-        s_if_plural = "" if minutes == 1 else "s"
-        await ctx.send(
-            embed=BlueEmbed(
-                title="Queue Timeout",
-                description=f"Players in Six Mans Queues are timed out after **{minutes} minute{s_if_plural}**.",
-            )
-        )
-
-    @commands.guild_only()
-    @commands.command(
-        aliases=[
-            "setDefaultQueueSize",
-            "setDefaultQMaxSize",
-            "setDefaultQMS",
-            "setDQMS",
-            "sdqms",
-        ]
-    )
-    @checks.admin_or_permissions()
-    async def setDefaultQueueMaxSize(self, ctx: Context, max_size: int):
-        """
-        Sets the default queue max size for the guild.
-
-        This will not change the queue max size for any queues. (Default: 6)
-        """
-        if not ctx.guild:
-            return
-
-        if max_size <= 2:
-            return await ctx.send(embed=ErrorEmbed(description="Queues sizes must be 2 or more players."))
-
-        if max_size % 2 == 1:
-            return await ctx.send(embed=ErrorEmbed(description="Queues sizes must be configured for an even number of players."))
-
-        await self._save_queue_max_size(ctx.guild, max_size)
-
-        if max_size == 2:
-            await self._save_team_selection(ctx.guild, GameMode.RANDOM)
-
-        await ctx.send("Done")
-
-    @commands.guild_only()
     @commands.command(aliases=["setQueueSize", "setQMaxSize", "setQMS", "sqms"])
     @checks.admin_or_permissions()
     async def setQueueMaxSize(self, ctx: Context, queue_name: str, *, max_size: int):
@@ -441,22 +337,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
 
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command(aliases=["getDQMaxSize", "getDQMS", "gdqms", "dqms"])
-    @checks.admin_or_permissions()
-    async def getDefaultQueueMaxSize(self, ctx: Context):
-        """Gets the max size for all queues in the guild. (Default: 6)"""
-        if not ctx.guild:
-            return
-
-        guild_queue_size = await self._get_queue_max_size(ctx.guild)
-        await ctx.send(
-            embed=BlueEmbed(
-                title="Default Queue Size",
-                description=f"Current default queue size: **{guild_queue_size}**",
-            )
-        )
 
     @commands.guild_only()
     @commands.command(aliases=["getQMaxSize", "getQMS", "gqms", "qms"])
@@ -1097,30 +977,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
         await ctx.send(embed=self.embed_queue_players(six_mans_queue))
 
     @commands.guild_only()
-    @commands.command(aliases=["setQLobby", "setQVC"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setQueueLobby(self, ctx: Context, lobby_voice: discord.VoiceChannel):
-        # TODO: Consider having the queues save the Queue Lobby VC
-        if not ctx.guild:
-            return
-
-        for queue in self.queues[ctx.guild]:
-            queue.lobby_vc = lobby_voice
-        await self._save_q_lobby_vc(ctx.guild, lobby_voice.id)
-        await self._save_queues(ctx.guild, self.queues[ctx.guild])
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command(aliases=["unsetQueueLobby, unsetQLobby", "clearQLobby"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def clearQueueLobby(self, ctx: Context):
-        if not ctx.guild:
-            return
-
-        await self._save_q_lobby_vc(ctx.guild, None)
-        await ctx.send("Done")
-
-    @commands.guild_only()
     @commands.command(aliases=["qn"])
     async def getQueueNames(self, ctx: Context):
         if not ctx.guild:
@@ -1155,162 +1011,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
             return
 
         await ctx.send(embed=self.embed_queue_info(six_mans_queue, await self._get_q_lobby_vc(ctx.guild)))
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def toggleAutoMove(self, ctx: Context):
-        """Toggle whether or not bot moves members to their assigned team voice channel"""
-        if not ctx.guild:
-            return
-
-        new_automove_status = not await self._get_automove(ctx.guild)
-        await self._save_automove(ctx.guild, new_automove_status)
-
-        action = "will move" if new_automove_status else "will not move"
-        message = f"Popped {self.queueMaxSize[ctx.guild]} Mans queues **{action}** members to their team voice channel."
-        await ctx.send(message)
-
-    @commands.guild_only()
-    @commands.command(aliases=["toggleReactToVote", "tvm", "trtv"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def toggleVoteMethod(self, ctx: Context):
-        """Toggles team selection voting method between commands and reactions."""
-        if not ctx.guild:
-            return
-
-        react_to_vote = not await self._is_react_to_vote(ctx.guild)
-        await self._save_react_to_vote(ctx.guild, react_to_vote)
-
-        action = "reactions" if react_to_vote else "commands"
-        message = f"Members of popped {self.queueMaxSize[ctx.guild]} Mans queues will vote for team reactions with **{action}**."
-        await ctx.send(message)
-
-    @commands.guild_only()
-    @commands.command(aliases=["setTeamSelection"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setDefaultTeamSelection(self, ctx: Context, team_selection_method):
-        """
-        Set method for Six Mans team selection (Default: Vote)
-
-        Valid team selection methods options:
-        - **Random**: selects random teams
-        - **Captains**: selects a captain for each team
-        - **Vote**: players vote for team selection method after queue pops
-        - **Balanced**: creates balanced teams from all participating players
-        """
-        # TODO: Support Captains [captains random, captains shuffle], Balanced
-        if not ctx.guild:
-            return
-
-        if await self._get_queue_max_size(ctx.guild) == 2:
-            return await ctx.send(":x: You may not change team selection method when default queue max size is 2.")
-
-        try:
-            ts = GameMode(team_selection_method)
-            await self._save_team_selection(ctx.guild, ts)
-            await ctx.send("Done.")
-        except ValueError:
-            return await ctx.send(f"**{team_selection_method}** is not a valid method of team selection.")
-
-    @commands.guild_only()
-    @commands.command(aliases=["getTeamSelection"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getDefaultTeamSelection(self, ctx: Context):
-        """Get method for Six Mans team selection (Default: Random)"""
-        if not ctx.guild:
-            return
-
-        team_selection = await self._team_selection(ctx.guild)
-        await ctx.send(f"Six Mans team selection is currently set to **{team_selection}**.")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setCategory(self, ctx: Context, category_channel: discord.CategoryChannel):
-        """Sets the category channel where all game channels will be created under"""
-        if not ctx.guild:
-            return
-
-        for queue in self.queues[ctx.guild]:
-            queue.category = category_channel
-        await self._save_category(ctx.guild, category_channel.id)
-        await self._save_queues(ctx.guild, self.queues[ctx.guild])
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getCategory(self, ctx: Context):
-        """Gets the channel currently assigned as the transaction channel"""
-        if not ctx.guild:
-            return
-
-        category = await self._category(ctx.guild)
-        category_fmt = category.mention if category else "None"
-
-        await ctx.send(f"{self.queueMaxSize[ctx.guild]} Mans category channel set to: {category_fmt}")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def unsetCategory(self, ctx: Context):
-        """Unsets the category channel. Game channels will not be created if this is not set"""
-        if not ctx.guild:
-            return
-
-        category = await self._category(ctx.guild)
-        old_helper_role = await self._helper_role(ctx.guild)
-        if old_helper_role and category:
-            await category.set_permissions(old_helper_role, overwrite=None)
-        await self._save_category(ctx.guild, None)
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setHelperRole(self, ctx: Context, helper_role: discord.Role):
-        """Sets the 6 Mans helper role. Anyone with this role will be able to see all the game channels that are created"""
-        if not ctx.guild:
-            return
-
-        await self._save_helper_role(ctx.guild, helper_role.id)
-        category = await self._category(ctx.guild)
-
-        if not category:
-            await ctx.reply("Six mans category channel is not configured.")
-            return
-
-        await category.set_permissions(helper_role, read_messages=True, manage_channels=True, connect=True)
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getHelperRole(self, ctx: Context):
-        """Gets the role currently assigned as the 6 Mans helper role"""
-        if not ctx.guild:
-            return
-
-        try:
-            await ctx.send(f"{self.queueMaxSize[ctx.guild]} Mans helper role set to: {(await self._helper_role(ctx.guild)).name}")
-        except AttributeError:
-            await ctx.send(f":x: {self.queueMaxSize[ctx.guild]} mans helper role not set")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def unsetHelperRole(self, ctx: Context):
-        """Unsets the 6 Mans helper role."""
-        if not ctx.guild:
-            return
-
-        category = await self._category(ctx.guild)
-        old_helper_role = await self._helper_role(ctx.guild)
-        if old_helper_role and category:
-            await category.set_permissions(old_helper_role, overwrite=None)
-        await self._save_helper_role(ctx.guild, None)
-        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command(aliases=["cag"])
@@ -1359,19 +1059,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
         expired = [pid for pid, ban in bans.items() if ban["expires"] <= now]
         for pid in expired:
             await self._remove_queue_ban(guild, int(pid))
-
-    async def has_perms(self, member: discord.Member):
-        # Admins
-        if member.guild_permissions.manage_guild:
-            return True
-
-        # Helpers
-        helper_role = await self._helper_role(member.guild)
-        if helper_role and helper_role in member.roles:
-            return True
-
-        # Default to no permissions
-        return False
 
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._put(player)
@@ -2096,80 +1783,6 @@ class SixMans(ScoreboardCommands, commands.Cog):
             if queue.guild == guild:
                 queue_dict[queue.id] = queue._to_dict()
         await self.config.guild(guild).Queues.set(queue_dict)
-
-    async def _player_timeout(self, guild: discord.Guild):
-        return await self.config.guild(guild).PlayerTimeout()
-
-    async def _save_player_timeout(self, guild: discord.Guild, time_seconds: int):
-        await self.config.guild(guild).PlayerTimeout.set(time_seconds)
-
-    async def _get_automove(self, guild: discord.Guild):
-        return await self.config.guild(guild).AutoMove()
-
-    async def _save_automove(self, guild: discord.Guild, automove: bool):
-        await self.config.guild(guild).AutoMove.set(automove)
-
-    async def _is_react_to_vote(self, guild: discord.Guild):
-        return await self.config.guild(guild).ReactToVote()
-
-    async def _save_react_to_vote(self, guild: discord.Guild, automove: bool):
-        await self.config.guild(guild).ReactToVote.set(automove)
-
-    async def _category(self, guild: discord.Guild) -> discord.CategoryChannel | None:
-        category_id = await self.config.guild(guild).CategoryChannel()
-        if not category_id:
-            return None
-        category = guild.get_channel(category_id)
-        if not isinstance(category, discord.CategoryChannel):
-            log.error(f"[{guild.name}] 6 mans category is not actually a category.")
-            return None
-        return category
-
-    async def _save_category(self, guild: discord.Guild, category: int | None):
-        await self.config.guild(guild).CategoryChannel.set(category)
-
-    async def _save_q_lobby_vc(self, guild: discord.Guild, vc: int | None):
-        await self.config.guild(guild).QLobby.set(vc)
-
-    async def _get_q_lobby_vc(self, guild: discord.Guild):
-        log.debug(f"Guild: {guild}")
-        lobby_voice = await self.config.guild(guild).QLobby()
-        log.debug(f"lobby_voice: {lobby_voice}")
-        for vc in guild.voice_channels:
-            if vc.id == lobby_voice:
-                return vc
-        return None
-
-    async def _get_queue_max_size(self, guild: discord.Guild):
-        return await self.config.guild(guild).DefaultQueueMaxSize()
-
-    async def _save_queue_max_size(self, guild: discord.Guild, max_size: int):
-        await self.config.guild(guild).DefaultQueueMaxSize.set(max_size)
-        self.queueMaxSize[guild] = max_size
-
-    async def _helper_role(self, guild: discord.Guild):
-        return guild.get_role(await self.config.guild(guild).HelperRole())
-
-    async def _save_helper_role(self, guild: discord.Guild, helper_role):
-        await self.config.guild(guild).HelperRole.set(helper_role)
-
-    async def _save_team_selection(self, guild: discord.Guild, team_selection: GameMode):
-        await self.config.guild(guild).DefaultTeamSelection.set(team_selection.value)
-
-    async def _team_selection(self, guild: discord.Guild) -> GameMode:
-        mode = await self.config.guild(guild).DefaultTeamSelection()
-        # Backwards compatibilitgy
-        if mode:
-            mode = mode.lower().capitalize()
-            return GameMode(mode)
-        else:
-            return GameMode.VOTE
-
-    async def _save_queues_enabled(self, guild: discord.Guild, enabled: bool):
-        return await self.config.guild(guild).QueuesEnabled.set(enabled)
-
-    async def _get_queues_enabled(self, guild: discord.Guild):
-        return await self.config.guild(guild).QueuesEnabled()
 
     async def _get_queue_bans(self, guild: discord.Guild) -> dict[str, QueueBan]:
         return await self.config.guild(guild).QueueBans()
