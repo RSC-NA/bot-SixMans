@@ -14,7 +14,10 @@ import pytest
 from sixMans.enums import GameState, Winner
 from sixMans.game import Game
 from sixMans.queue import SixMansQueue
+from sixMans.scoreboard.scoreboard import Scoreboard
 from sixMans.sixMans import SixMans
+
+from .scoreboard_env import make_config
 
 
 def make_guild(guild_id=1):
@@ -82,7 +85,7 @@ def queue(guild):
 
 
 @pytest.fixture
-def cog(guild, queue):
+def cog(guild, queue, tmp_path):
     bot = MagicMock()
     bot.guilds = [guild]
     with patch("sixMans.sixMans.Config.get_conf") as mock_conf, patch("sixMans.sixMans.asyncio.create_task"):
@@ -94,13 +97,8 @@ def cog(guild, queue):
     cog.games = {guild: []}
     cog.queues_enabled = {guild: True}
     cog._save_games = AsyncMock()
-    cog._save_scores = AsyncMock()
+    cog.scoreboard = Scoreboard(make_config(tmp_path))
     cog._save_queues = AsyncMock()
-    cog._save_players = AsyncMock()
-    cog._save_games_played = AsyncMock()
-    cog._scores = AsyncMock(return_value=[])
-    cog._players = AsyncMock(return_value={})
-    cog._games_played = AsyncMock(return_value=0)
     cog._helper_role = AsyncMock(return_value=None)
     cog._get_automove = AsyncMock(return_value=False)
     cog._get_q_lobby_vc = AsyncMock(return_value=None)
@@ -204,8 +202,8 @@ class TestFinishGame:
 
         await cog._finish_game(guild, game, queue, Winner.BLUE)
 
-        cog._save_scores.assert_not_awaited()
-        cog._save_games_played.assert_not_awaited()
+        assert await cog.scoreboard.scores(guild) == []
+        assert await cog.scoreboard.games_played(guild) == 0
         assert queue.gamesPlayed == 0
 
     async def test_awards_points_exactly_once(self, cog, guild, queue, players):
@@ -218,10 +216,9 @@ class TestFinishGame:
             await cog._finish_game(guild, game, queue, Winner.BLUE)
 
         assert queue.gamesPlayed == 1
-        assert cog._save_scores.await_count == 1
+        assert await cog.scoreboard.games_played(guild) == 1
         # One score row per player, not two
-        saved_scores = cog._save_scores.await_args_list[0].args[1]
-        assert len(saved_scores) == len(players)
+        assert len(await cog.scoreboard.scores(guild)) == len(players)
 
     async def test_scores_the_live_object_after_a_reload(self, cog, guild, queue, players):
         live = build_game(queue, players, game_id=42)

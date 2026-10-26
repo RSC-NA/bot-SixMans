@@ -298,7 +298,7 @@ class TestRebuildPlayerTotals:
         queues = {q.id: q for q in cog.queues[guild]}
         assert queues[GENERAL].players == EXPECTED_GENERAL_PLAYERS
         assert queues[LOWER].players == EXPECTED_LOWER_PLAYERS
-        assert await cog._players(guild) == EXPECTED_SERVER_PLAYERS
+        assert await cog.scoreboard.players(guild) == EXPECTED_SERVER_PLAYERS
 
     async def test_running_again_changes_nothing(self, cog, guild, settings_path):
         await cog._rebuild_player_totals(guild, apply=True)
@@ -312,7 +312,7 @@ class TestRebuildPlayerTotals:
     async def test_leaderboards_use_rebuilt_totals(self, cog, guild):
         await cog._rebuild_player_totals(guild, apply=True)
 
-        sorted_players = sort_players(await cog._players(guild))
+        sorted_players = sort_players(await cog.scoreboard.players(guild))
 
         assert [pid for pid, _ in sorted_players] == ["6", "4", "2", "1", "3", "5"]
 
@@ -330,11 +330,11 @@ class TestRebuildAlongsideGames:
             await cog._finish_game(guild, game, queue, Winner.BLUE)
 
         # The fix records the new game, but only that game
-        assert (await cog._players(guild))["3"] == totals(3, 1, 1)
+        assert (await cog.scoreboard.players(guild))["3"] == totals(3, 1, 1)
 
         await cog._rebuild_player_totals(guild, apply=True)
 
-        players = await cog._players(guild)
+        players = await cog.scoreboard.players(guild)
         assert players["3"] == totals(7, 2, 3)  # 2 earlier games plus the one just played
         assert queue.players["3"] == totals(7, 2, 3)
         # Brand new players are recorded by the fix itself and need nothing rebuilt
@@ -358,7 +358,7 @@ class TestRebuildAlongsideGames:
         cog._remove_game = AsyncMock()
 
         paused, resume = asyncio.Event(), asyncio.Event()
-        save_scores, save_players = cog._save_scores, cog._save_players
+        save_scores, save_players = cog.scoreboard._save_scores, cog.scoreboard._save_players
 
         async def pause_once(save, *args):
             if not paused.is_set():
@@ -367,10 +367,10 @@ class TestRebuildAlongsideGames:
             await save(*args)
 
         if game_first:
-            cog._save_scores = lambda *args: pause_once(save_scores, *args)
+            cog.scoreboard._save_scores = lambda *args: pause_once(save_scores, *args)
             first = asyncio.create_task(cog._finish_game(guild, game, queue, Winner.BLUE))
         else:
-            cog._save_players = lambda *args: pause_once(save_players, *args)
+            cog.scoreboard._save_players = lambda *args: pause_once(save_players, *args)
             first = asyncio.create_task(cog._rebuild_player_totals(guild, apply=True))
         await asyncio.wait_for(paused.wait(), 1)
 

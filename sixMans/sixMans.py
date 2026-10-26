@@ -25,10 +25,11 @@ from sixMans.game import Game
 from sixMans.models.game import GameData
 from sixMans.models.queue import QueueData
 from sixMans.queue import SixMansQueue
-from sixMans.scoreboard.stats import filter_scores, give_points, make_score, plan_totals_rebuild, sort_players
+from sixMans.scoreboard.scoreboard import Scoreboard
+from sixMans.scoreboard.stats import filter_scores, sort_players
 from sixMans.strings import Strings
-from sixMans.types import PlayerScore, PlayerStats, QueueBan, SixMansConfig
-from sixMans.utils import format_score_time, utc_now
+from sixMans.types import QueueBan, SixMansConfig
+from sixMans.utils import utc_now
 from sixMans.views.cancel import CancelView, ForceCancelView
 from sixMans.views.score import ForceResultView, ScoreReportView
 
@@ -75,8 +76,7 @@ class SixMans(commands.Cog):
         self.timeout_tasks = {}
         # Strong refs to detached game tasks so they aren't GC'd mid-flight
         self._background_tasks: set[asyncio.Task] = set()
-        # Serializes read-modify-write of player totals between finishing games and rebuilding totals
-        self._stats_lock = asyncio.Lock()
+        self.scoreboard = Scoreboard(self.config)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -1145,8 +1145,8 @@ class SixMans(commands.Cog):
             players = queue.players
             games_played = queue.gamesPlayed
         else:
-            players = await self._players(ctx.guild)
-            games_played = await self._games_played(ctx.guild)
+            players = await self.scoreboard.players(ctx.guild)
+            games_played = await self.scoreboard.games_played(ctx.guild)
 
         if games_played == 0:
             await ctx.send(f":x: No games have been played in {queue_name}")
@@ -1166,7 +1166,7 @@ class SixMans(commands.Cog):
         if not ctx.guild:
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = None
         if queue_name:
@@ -1195,7 +1195,7 @@ class SixMans(commands.Cog):
         if not ctx.guild:
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1221,7 +1221,7 @@ class SixMans(commands.Cog):
         if not ctx.guild:
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1247,7 +1247,7 @@ class SixMans(commands.Cog):
         if not ctx.guild:
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1299,7 +1299,7 @@ class SixMans(commands.Cog):
         if queue:
             players = queue.players
         else:
-            players = await self._players(ctx.guild)
+            players = await self.scoreboard.players(ctx.guild)
         queue_name = queue.name if queue else ctx.guild.name
 
         if not players:
@@ -1327,7 +1327,7 @@ class SixMans(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1360,7 +1360,7 @@ class SixMans(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1393,7 +1393,7 @@ class SixMans(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1426,7 +1426,7 @@ class SixMans(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             return
 
-        scores = await self._scores(ctx.guild)
+        scores = await self.scoreboard.scores(ctx.guild)
 
         queue = self.get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
@@ -1858,29 +1858,7 @@ class SixMans(commands.Cog):
             case Winner.PENDING:
                 raise RuntimeError("Invalid result for game winner.")
 
-        async with self._stats_lock:
-            _scores = await self._scores(guild)
-            _players = await self._players(guild)
-            _games_played = await self._games_played(guild)
-            date_time = format_score_time(utc_now())
-            for player in winning_players:
-                score = make_score(six_mans_queue.id, six_mans_queue.points, game.id, player.id, 1, date_time)
-                give_points(six_mans_queue.players, score)
-                give_points(_players, score)
-                _scores.insert(0, score)
-            for player in losing_players:
-                score = make_score(six_mans_queue.id, six_mans_queue.points, game.id, player.id, 0, date_time)
-                give_points(six_mans_queue.players, score)
-                give_points(_players, score)
-                _scores.insert(0, score)
-
-            _games_played += 1
-            six_mans_queue.gamesPlayed += 1
-
-            await self._save_scores(guild, _scores)
-            await self._save_queues(guild, self.queues[guild])
-            await self._save_players(guild, _players)
-            await self._save_games_played(guild, _games_played)
+        await self.scoreboard.record_game(guild, six_mans_queue, game.id, winning_players, losing_players, save_queues=lambda: self._save_queues(guild, self.queues[guild]))
 
         if await self._get_automove(guild):  # game.automove not working?
             qlobby_vc = await self._get_q_lobby_vc(guild)
@@ -1991,39 +1969,8 @@ class SixMans(commands.Cog):
             game.captains[1] = random.sample(list(game.orange), 1)[0]  # Swap Orange team captain
 
     async def _rebuild_player_totals(self, guild: discord.Guild, apply: bool) -> dict:
-        """Plan (and optionally apply) a totals rebuild. Returns every change with its before and after totals."""
-        async with self._stats_lock:
-            scores = await self._scores(guild)
-            players = await self._players(guild)
-            queues = self.queues.get(guild, [])
-
-            player_changes = plan_totals_rebuild(players, scores)
-            queue_changes = {queue: plan_totals_rebuild(queue.players, scores, queue.id) for queue in queues}
-
-            record = {
-                "server": {pid: {"before": players.get(pid), "after": totals} for pid, totals in player_changes.items()},
-                "queues": {
-                    str(queue.id): {
-                        "name": queue.name,
-                        "players": {pid: {"before": queue.players.get(pid), "after": totals} for pid, totals in changes.items()},
-                    }
-                    for queue, changes in queue_changes.items()
-                    if changes
-                },
-            }
-            # Serialize now so the record can't pick up later changes to the live totals
-            record = json.loads(json.dumps(record))
-
-            if apply:
-                if player_changes:
-                    players.update(player_changes)
-                    await self._save_players(guild, players)
-                if any(queue_changes.values()):
-                    for queue, changes in queue_changes.items():
-                        queue.players.update(changes)
-                    await self._save_queues(guild, queues)
-
-        return record
+        queues = self.queues.get(guild, [])
+        return await self.scoreboard.rebuild_totals(guild, queues, apply, save_queues=lambda: self._save_queues(guild, queues))
 
     def _summarize_totals_rebuild(self, record: dict) -> str:
         def describe(changes: dict) -> str:
@@ -2651,9 +2598,7 @@ class SixMans(commands.Cog):
     async def _clear_all_data(self, guild: discord.Guild):
         await self._save_games(guild, [])
         await self._save_queues(guild, [])
-        await self._save_scores(guild, [])
-        await self._save_games_played(guild, 0)
-        await self._save_players(guild, {})
+        await self.scoreboard.clear(guild)
         await self._save_category(guild, None)
         await self._save_q_lobby_vc(guild, None)
         await self._save_queue_max_size(guild, 6)
@@ -2683,29 +2628,11 @@ class SixMans(commands.Cog):
                 queue_dict[queue.id] = queue._to_dict()
         await self.config.guild(guild).Queues.set(queue_dict)
 
-    async def _scores(self, guild: discord.Guild) -> list[PlayerScore]:
-        return await self.config.guild(guild).Scores()
-
-    async def _save_scores(self, guild: discord.Guild, scores: list[PlayerScore]):
-        await self.config.guild(guild).Scores.set(scores)
-
-    async def _games_played(self, guild: discord.Guild):
-        return await self.config.guild(guild).GamesPlayed()
-
-    async def _save_games_played(self, guild: discord.Guild, games_played: int):
-        await self.config.guild(guild).GamesPlayed.set(games_played)
-
     async def _player_timeout(self, guild: discord.Guild):
         return await self.config.guild(guild).PlayerTimeout()
 
     async def _save_player_timeout(self, guild: discord.Guild, time_seconds: int):
         await self.config.guild(guild).PlayerTimeout.set(time_seconds)
-
-    async def _players(self, guild: discord.Guild) -> dict[str, PlayerStats]:
-        return await self.config.guild(guild).Players()
-
-    async def _save_players(self, guild: discord.Guild, players: dict[str, PlayerStats]):
-        await self.config.guild(guild).Players.set(players)
 
     async def _get_automove(self, guild: discord.Guild):
         return await self.config.guild(guild).AutoMove()
