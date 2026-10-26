@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Publish GitHub release
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # Package only tracked files under sixMans/, laid out the way Red expects a cog folder.
+      - name: Build cog archive
+        run: git archive --format=zip --prefix=sixMans/ -o "sixMans-${GITHUB_REF_NAME}.zip" HEAD:sixMans
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "sixMans-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
