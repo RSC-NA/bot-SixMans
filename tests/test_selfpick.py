@@ -3,6 +3,8 @@
 Covers bug: Orange-full error message says "Blue team is already full".
 Covers bug: a completed pick left `finished` False, so game.self_picking_teams()
 reported an error and assigned no teams.
+Covers bug: the player check was named `on_interaction`, which discord.py never
+calls, so anyone who could see the channel could take a team slot.
 """
 
 from typing import cast
@@ -100,3 +102,18 @@ async def test_self_picking_teams_assigns_teams(monkeypatch):
     assert len(game.blue) == 3
     assert len(game.orange) == 3
     assert game.state == GameState.ONGOING
+
+
+@pytest.mark.asyncio
+async def test_non_player_cannot_pick_team():
+    """Someone who can see the channel but is not in the game must be turned away."""
+    players = [make_member(f"P{i}", i) for i in range(1, 7)]
+    game = as_game(FakeGame(players=players))
+    view = SelfPickingView(game=game)
+    await view.prompt()
+
+    outsider = make_interaction(make_member("Helper", 99))
+    assert await view.interaction_check(outsider) is False
+    outsider.response.send_message.assert_called_once()
+
+    assert await view.interaction_check(make_interaction(players[0])) is True

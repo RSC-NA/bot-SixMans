@@ -115,6 +115,13 @@ class GameModeVote(discord.ui.View):
         await interaction.response.defer()
         await safe_edit(self.msg, embed=self.embed)
 
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Only players in this game may vote."""
+        if interaction.user in self.game.players:
+            return True
+        await interaction.response.send_message(content="You are not an active player in this game...", ephemeral=True)
+        return False
+
     def resolve_timeout_result(self) -> GameMode:
         """Pick the leading game mode, or RANDOM if nobody voted.
 

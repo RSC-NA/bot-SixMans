@@ -5,6 +5,7 @@ Covers:
 - Vote timeout picks the leading mode.
 - Timing out against a deleted channel does not raise.
 - A timed out vote still dispatches team selection on the leading mode.
+- Only players in the game may vote.
 """
 
 from typing import cast
@@ -163,3 +164,18 @@ async def test_timed_out_vote_dispatches_leading_mode(monkeypatch):
     assert not any("Error during game mode vote" in s for s in sends), f"Reported an error on a timed out vote: {sends}"
     assert game.teamSelection == GameMode.CAPTAINS
     dispatched.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_non_player_cannot_vote():
+    """Someone who can see the channel but is not in the game must not be able to vote."""
+    players = [make_member(f"P{i}", i) for i in range(1, 7)]
+    game = as_game(FakeGame(players=players))
+    view = GameModeVote(game=game)
+    await view.start()
+
+    outsider = make_interaction(make_member("Helper", 99))
+    assert await view.interaction_check(outsider) is False
+    outsider.response.send_message.assert_called_once()
+
+    assert await view.interaction_check(make_interaction(players[0])) is True

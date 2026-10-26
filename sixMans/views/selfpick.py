@@ -26,7 +26,7 @@ class SelfPickingView(discord.ui.View):
         self.team_size = len(game.players) / 2
         self.finished = False
 
-    async def on_interaction(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user not in self.players:
             await interaction.response.send_message(
                 content="You are not an active player in this game...",

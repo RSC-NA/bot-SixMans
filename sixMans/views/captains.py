@@ -47,16 +47,6 @@ class CaptainsView(discord.ui.View):
         # Embed
         self.embed: discord.Embed
 
-    async def on_interaction(self, interaction: discord.Interaction) -> bool:
-        if interaction.user != self.picking:
-            log.debug(f"{interaction.user} is not picking now...")
-            await interaction.response.send_message(
-                content=f"Please wait until {self.picking.display_name} has selected a player.",
-                ephemeral=True,
-            )
-            return False
-        return True
-
     async def start(self):
         """Start picks for captains"""
         if not self.channel:
