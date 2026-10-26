@@ -33,8 +33,7 @@ class Scoreboard:
     async def load(self, guild: discord.Guild):
         """Migrate the guild's stats if needed, then (re)load per-queue stats into memory."""
         async with self.lock:
-            await self._migrate(guild)
-            self._queue_stats[guild.id] = await self.config.guild(guild).QueueStats()
+            await self._load(guild)
 
     async def scores(self, guild: discord.Guild) -> list[PlayerScore]:
         """Every score row, newest first."""
@@ -70,6 +69,7 @@ class Scoreboard:
     async def mark_queue_deleted(self, guild: discord.Guild, queue: SixMansQueue):
         """Keep a removed queue's stats, flagged so it's clear the queue no longer exists."""
         async with self.lock:
+            await self._ensure_loaded(guild)
             stats = self._entry(guild, queue)
             stats["Deleted"] = True
             await self._save_queue_stats(guild)
@@ -77,6 +77,7 @@ class Scoreboard:
     async def record_game(self, guild: discord.Guild, queue: SixMansQueue, game_id: int, winners: Iterable[discord.Member], losers: Iterable[discord.Member]):
         """Add a finished game to the score history and every total it counts towards."""
         async with self.lock:
+            await self._ensure_loaded(guild)
             scores = await self.scores(guild)
             players = await self.players(guild)
             games_played = await self.games_played(guild)
@@ -99,6 +100,7 @@ class Scoreboard:
     async def rebuild_totals(self, guild: discord.Guild, queues: list[SixMansQueue], apply: bool) -> dict:
         """Plan (and optionally apply) a totals rebuild. Returns every change with its before and after totals."""
         async with self.lock:
+            await self._ensure_loaded(guild)
             scores = await self.scores(guild)
             players = await self.players(guild)
 
@@ -135,6 +137,15 @@ class Scoreboard:
         stats = self._queue_stats.setdefault(guild.id, {}).setdefault(str(queue.id), QueueStats(Name=queue.name, Deleted=False, GamesPlayed=0, Players={}))
         stats["Name"] = queue.name  # Follow renames, so a deleted queue is recorded under its final name
         return stats
+
+    async def _load(self, guild: discord.Guild):
+        await self._migrate(guild)
+        self._queue_stats[guild.id] = await self.config.guild(guild).QueueStats()
+
+    async def _ensure_loaded(self, guild: discord.Guild):
+        """Load a guild missed at startup before writing, so saving its stats can't replace what's on disk."""
+        if guild.id not in self._queue_stats:
+            await self._load(guild)
 
     async def _migrate(self, guild: discord.Guild):
         group = self.config.guild(guild)

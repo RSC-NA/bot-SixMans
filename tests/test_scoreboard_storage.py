@@ -9,7 +9,8 @@ import pytest
 from sixMans.enums import GameState, Winner
 from sixMans.game import Game
 from sixMans.models.queue import QueueData
-from sixMans.scoreboard.scoreboard import SCHEMA_VERSION
+from sixMans.queue import SixMansQueue
+from sixMans.scoreboard.scoreboard import SCHEMA_VERSION, Scoreboard
 
 from .scoreboard_env import DUELS, EMPTY, GENERAL, build_cog, make_config, make_guild, make_member, scenario
 from .test_game_teardown import make_text_channel, make_voice_channel
@@ -216,3 +217,32 @@ class TestRollback:
             assert parsed.GamesPlayed >= 0
             assert isinstance(parsed.Players.model_dump(), dict)
         assert str(EMPTY) not in saved(settings_path, guild)["Queues"]
+
+
+class TestUnloadedGuild:
+    async def test_writes_for_a_guild_missed_at_startup_keep_its_stats(self, config, guild, data, settings_path):
+        """A fresh Scoreboard has nothing cached for the guild. Saving must not replace what's on disk."""
+        await build_cog(config, guild, data)
+        scoreboard = Scoreboard(config)
+        queue = SixMansQueue("General", guild, [], {"Play": 1, "Win": 2}, 6, id=GENERAL)
+
+        await scoreboard.record_game(guild, queue, 1, [make_member(1)], [make_member(2)])
+
+        stats = saved(settings_path, guild)["QueueStats"]
+        assert set(stats) == set(data["Queues"])
+        assert stats[str(DUELS)]["GamesPlayed"] == 5
+        assert stats[str(GENERAL)]["GamesPlayed"] == 38
+        assert stats[str(GENERAL)]["Players"]["3"] == data["Queues"][str(GENERAL)]["Players"]["3"]
+
+    async def test_first_write_migrates_an_unmigrated_guild(self, config, guild, data, settings_path):
+        for key, value in data.items():
+            await config.guild(guild).get_attr(key).set(value)
+        scoreboard = Scoreboard(config)
+        queue = SixMansQueue("Duels", guild, [], {"Play": 1, "Win": 1}, 2, id=DUELS)
+
+        await scoreboard.mark_queue_deleted(guild, queue)
+
+        stats = saved(settings_path, guild)["QueueStats"]
+        assert stats[str(GENERAL)]["GamesPlayed"] == 37
+        assert stats[str(DUELS)]["Deleted"] is True
+        assert saved(settings_path, guild)["ScoreboardSchema"] == SCHEMA_VERSION
