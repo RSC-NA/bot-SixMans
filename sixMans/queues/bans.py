@@ -44,13 +44,13 @@ class QueueBanCommands:
             return
 
         if duration_minutes <= 0:
-            return await ctx.send(embed=ErrorEmbed(description="Duration must be greater than 0 minutes."), ephemeral=True)
+            return await ctx.send(embed=ErrorEmbed(description="Duration must be greater than 0 minutes."))
 
         if not reason:
             reason = "None provided."
 
         if len(reason) > 1500:
-            return await ctx.send(embed=ErrorEmbed(description="Reason must be 1500 characters or less."), ephemeral=True)
+            return await ctx.send(embed=ErrorEmbed(description="Reason must be 1500 characters or less."))
 
         expires = datetime.datetime.now(datetime.UTC).timestamp() + (duration_minutes * 60)
         ban_details = QueueBan(
@@ -69,7 +69,7 @@ class QueueBanCommands:
         msg = f":white_check_mark: {player.mention} has been banned from queueing until <t:{expires_int}:F> (<t:{expires_int}:R>)."
         if reason:
             msg += f"\nReason: {reason}"
-        await ctx.send(msg, ephemeral=True)
+        await ctx.send(msg)
 
         # DM the player
         try:

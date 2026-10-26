@@ -311,7 +311,7 @@ class QueueCommands(QueueState):
             expires = int(banned["expires"])
             # Do not display reason for everyone to see
             msg = f":x: You are banned from queueing until <t:{expires}:F> (<t:{expires}:R>)."
-            return await ctx.send(msg, ephemeral=True)
+            return await ctx.send(msg)
 
         player = ctx.author
         if player in q.queue.queue:

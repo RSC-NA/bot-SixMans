@@ -491,11 +491,12 @@ number of games.
 These are facts about the current implementation that are easy to get wrong from
 the command help text alone.
 
-- **`ephemeral=True` does nothing on prefix commands.** `[p]queueBan`'s
-  confirmation and `[p]queue`'s "you are banned" notice pass `ephemeral=True`,
-  which discord.py drops when there is no interaction. Both are posted publicly
-  in the channel. The ban *reason* is deliberately omitted from the `[p]queue`
-  notice, but the fact of the ban and its expiry are visible to everyone.
+- **Queue ban messages are public.** `[p]queueBan`'s confirmation, which
+  includes the reason, is posted in the channel the command was run in.
+  `[p]queue`'s "you are banned" notice is posted in the queue channel; it leaves
+  out the reason, but the fact of the ban and its expiry are visible to
+  everyone. Only the banned member's notification, sent when the ban is issued,
+  is a DM.
 - **The 5-minute score-report gate is measured from the game channel's
   creation time.**
 - **Game channels are deleted 30 seconds after a game ends** (cancelled or
