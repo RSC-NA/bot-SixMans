@@ -192,12 +192,10 @@ class GameCommands(GameLifecycle):
 
         msg_created_at = ctx.message.created_at
         channel_created_at = ctx.channel.created_at
-        game_time = msg_created_at - channel_created_at
+        game_seconds = int((msg_created_at - channel_created_at).total_seconds())
 
-        if game_time.seconds < MINIMUM_GAME_TIME:
-            await ctx.send(
-                f":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created.\nCurrent time that's passed = **{game_time.seconds // 60} minute(s)**"
-            )
+        if game_seconds < MINIMUM_GAME_TIME:
+            await ctx.send(f":x: You can't report a game outcome until at least **5 minutes** have passed since the game was created.\nCurrent time that's passed = **{game_seconds // 60} minute(s)**")
             return
 
         game, six_mans_queue = await self.get_info(ctx)

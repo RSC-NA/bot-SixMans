@@ -496,9 +496,8 @@ the command help text alone.
   which discord.py drops when there is no interaction. Both are posted publicly
   in the channel. The ban *reason* is deliberately omitted from the `[p]queue`
   notice, but the fact of the ban and its expiry are visible to everyone.
-- **The 5-minute score-report gate uses `timedelta.seconds`.** It is measured
-  from the game channel's creation time, and reads `.seconds` rather than
-  `.total_seconds()`, so it rolls over every 24 hours.
+- **The 5-minute score-report gate is measured from the game channel's
+  creation time.**
 - **Game channels are deleted 30 seconds after a game ends** (cancelled or
   scored), for both the text channel and the two team voice channels.
 - **Popping a queue removes its players from every other queue** in the guild.
