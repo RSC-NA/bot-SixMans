@@ -1,0 +1,774 @@
+{
+  "balance scores": {
+    "1": {
+      "QWP": 0.58,
+      "Rank": 1,
+      "Score": 1.16
+    },
+    "15": {
+      "QWP": null,
+      "Rank": 1,
+      "Score": 1.0
+    },
+    "2": {
+      "QWP": 0.56,
+      "Rank": 1,
+      "Score": 1.12
+    },
+    "7": {
+      "QWP": 1.0,
+      "Rank": 1,
+      "Score": 2.0
+    },
+    "8": {
+      "QWP": 0.33,
+      "Rank": 1,
+      "Score": 0.66
+    },
+    "9": {
+      "QWP": 0.27,
+      "Rank": 1,
+      "Score": 0.54
+    }
+  },
+  "qlb day Duels": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "1\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "2\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player14                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   2`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "Duels 6 Mans Daily Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb day Empty": {
+    "text": ":x: No games have been played in Empty"
+  },
+  "qlb day None": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "2\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "7\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player6                  :**\n`7` **Player14                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   5`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans Daily Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb month Duels": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "2\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "3\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player14                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   2`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "Duels 6 Mans Monthly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb month None": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "5\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "11\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player7                  :**\n`7` **Player14                 :**\n`8` **Player6                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans Monthly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb overall Duels": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "5\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "3\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player14                 :**\n`3` **Player2                  :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   4`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "Duels 6 Mans All-time Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb overall Empty": {
+    "text": ":x: No games have been played in Empty"
+  },
+  "qlb overall General": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "37\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "13\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player6                  :**\n`7` **Player8                  :**\n`8` **Player9                  :**\n`9` **Player10                 :**\n`10` **Player7                  :**\n`11` **Player11                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `  28`  Wins: ` 11`  GP: ` 19` WP: `57.9%`\nPoints: `  26`  Wins: ` 10`  GP: ` 18` WP: `55.6%`\nPoints: `  24`  Wins: `  9`  GP: ` 17` WP: `52.9%`\nPoints: `  22`  Wins: `  8`  GP: ` 16` WP: `50.0%`\nPoints: `  20`  Wins: `  7`  GP: ` 15` WP: `46.7%`\nPoints: `  18`  Wins: `  6`  GP: ` 14` WP: `42.9%`\nPoints: `  14`  Wins: `  4`  GP: ` 12` WP: `33.3%`\nPoints: `  12`  Wins: `  3`  GP: ` 11` WP: `27.3%`\nPoints: `  10`  Wins: `  2`  GP: ` 10` WP: `20.0%`\nPoints: `   9`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   8`  Wins: `  1`  GP: `  9` WP: `11.1%`"
+        }
+      ],
+      "flags": 0,
+      "title": "General 6 Mans All-time Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb overall No Such Queue": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "42\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "16\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**\n\n`15` **Player14                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\nPoints: `  20`  Wins: `  5`  GP: ` 20` WP: `25.0%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans All-time Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb overall None": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "42\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "16\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**\n\n`15` **Player14                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\nPoints: `  20`  Wins: `  5`  GP: ` 20` WP: `25.0%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans All-time Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb week General": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "2\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "10\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player7                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player8                  :**\n`9` **Player9                  :**\n`10` **Player10                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "General 6 Mans Weekly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb week None": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "3\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "11\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player7                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player14                 :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans Weekly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb year General": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "4\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "13\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player7                  :**\n`7` **Player11                 :**\n`8` **Player12                 :**\n`10` **Player6                  :**\n`11` **Player8                  :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "General 6 Mans Yearly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "qlb year None": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Games Played",
+          "value": "6\n"
+        },
+        {
+          "inline": true,
+          "name": "Unique Players",
+          "value": "14\n"
+        },
+        {
+          "inline": true,
+          "name": "\u2800",
+          "value": "\u2800"
+        },
+        {
+          "inline": true,
+          "name": "Player",
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player7                  :**\n`7` **Player14                 :**\n`8` **Player11                 :**\n`9` **Player12                 :**\n`11` **Player6                  :**"
+        },
+        {
+          "inline": true,
+          "name": "Stats",
+          "value": "Points: `   9`  Wins: `  3`  GP: `  4` WP: `75.0%`\nPoints: `   8`  Wins: `  2`  GP: `  4` WP: `50.0%`\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `"
+        }
+      ],
+      "flags": 0,
+      "title": "RSC 3v3 6 Mans Yearly Leaderboard",
+      "type": "rich"
+    }
+  },
+  "queue info 111": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Team Selection",
+          "value": "Vote"
+        },
+        {
+          "inline": false,
+          "name": "Channels",
+          "value": "<#10>\n"
+        },
+        {
+          "inline": false,
+          "name": "Queue Size",
+          "value": "6"
+        },
+        {
+          "inline": false,
+          "name": "Games Played",
+          "value": "37\n"
+        },
+        {
+          "inline": false,
+          "name": "Unique Players All-Time",
+          "value": "13\n"
+        },
+        {
+          "inline": false,
+          "name": "Point Breakdown",
+          "value": "**Per Series Played:** 1\n**Per Series Win:** 2"
+        }
+      ],
+      "flags": 0,
+      "title": "General 6 Mans Info",
+      "type": "rich"
+    }
+  },
+  "queue info 222": {
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Team Selection",
+          "value": "Vote"
+        },
+        {
+          "inline": false,
+          "name": "Channels",
+          "value": "<#20>\n"
+        },
+        {
+          "inline": false,
+          "name": "Queue Size",
+          "value": "2"
+        },
+        {
+          "inline": false,
+          "name": "Games Played",
+          "value": "5\n"
+        },
+        {
+          "inline": false,
+          "name": "Unique Players All-Time",
+          "value": "3\n"
+        },
+        {
+          "inline": false,
+          "name": "Point Breakdown",
+          "value": "**Per Series Played:** 1\n**Per Series Win:** 1"
+        }
+      ],
+      "flags": 0,
+      "title": "Duels 2 Mans Info",
+      "type": "rich"
+    }
+  },
+  "rank alltime 1 Duels": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for Duels queue (2 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `1/3`\nWins: `1/3`\nGames Played: `1/3`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   4`\n`   2`\n`   2`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/1.png"
+      },
+      "title": "Player1 All-time Rank",
+      "type": "rich"
+    }
+  },
+  "rank alltime 1 None": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for RSC 3v3 queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `2/16`\nWins: `2/16`\nGames Played: `1/16`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`  38`\n`  14`\n`  29`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/1.png"
+      },
+      "title": "Player1 All-time Rank",
+      "type": "rich"
+    }
+  },
+  "rank alltime 99 None": {
+    "embed": {
+      "color": 15158332,
+      "description": "No stats yet to rank <@99>",
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/99.png"
+      },
+      "title": "Player99 RSC 3v3 6 Mans All-time Rank",
+      "type": "rich"
+    }
+  },
+  "rank alltime None Empty": {
+    "text": ":x: Player ranks not available for Empty"
+  },
+  "rank alltime None None": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for RSC 3v3 queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `15/16`\nWins: `15/16`\nGames Played: `15/16`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`  12`\n`   1`\n`  16`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/14.png"
+      },
+      "title": "Player14 All-time Rank",
+      "type": "rich"
+    }
+  },
+  "rank daily 2 General": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for General queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `2/6`\nWins: `2/6`\nGames Played: `2/6`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   3`\n`   1`\n`   1`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/2.png"
+      },
+      "title": "Player2 Daily Rank",
+      "type": "rich"
+    }
+  },
+  "rank daily None None": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for RSC 3v3 queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `7/7`\nWins: `7/7`\nGames Played: `7/7`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   1`\n`   0`\n`   1`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/14.png"
+      },
+      "title": "Player14 Daily Rank",
+      "type": "rich"
+    }
+  },
+  "rank monthly 3 None": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for RSC 3v3 queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `3/11`\nWins: `3/11`\nGames Played: `3/11`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   6`\n`   2`\n`   2`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/3.png"
+      },
+      "title": "Player3 Monthly Rank",
+      "type": "rich"
+    }
+  },
+  "rank monthly None Duels": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for Duels queue (2 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `1/3`\nWins: `1/3`\nGames Played: `1/3`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   3`\n`   1`\n`   2`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/14.png"
+      },
+      "title": "Player14 Monthly Rank",
+      "type": "rich"
+    }
+  },
+  "rank weekly 7 General": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for General queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `4/10`\nWins: `4/10`\nGames Played: `4/10`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   3`\n`   1`\n`   1`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/7.png"
+      },
+      "title": "Player7 Weekly Rank",
+      "type": "rich"
+    }
+  },
+  "rank yearly 12 General": {
+    "embed": {
+      "color": 3447003,
+      "description": "Player rank data for General queue (6 mans)",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Category",
+          "value": "Points: `8/13`\nWins: `8/13`\nGames Played: `10/13`"
+        },
+        {
+          "inline": true,
+          "name": "Value",
+          "value": "`   3`\n`   1`\n`   1`"
+        }
+      ],
+      "flags": 0,
+      "thumbnail": {
+        "url": "https://cdn.example/12.png"
+      },
+      "title": "Player12 Yearly Rank",
+      "type": "rich"
+    }
+  },
+  "rank yearly None Empty": {
+    "text": ":x: Player ranks not available for Empty"
+  }
+}
