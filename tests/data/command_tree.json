@@ -1,0 +1,1384 @@
+{
+  "commands": {
+    "addNewQueue": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "inspect._empty",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "name"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "points_per_play"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "points_per_win"
+        },
+        {
+          "annotation": "discord.channel.TextChannel",
+          "default": "<class 'inspect._empty'>",
+          "kind": "VAR_POSITIONAL",
+          "name": "channels"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "cancelGame": {
+      "aliases": [
+        "cg"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Cancel the current game. Can only be used in a game channel.\nThe game will end with no points given to any of the players. The players with then be allowed to queue again.",
+      "hidden": false,
+      "max_concurrency": [
+        1,
+        "channel",
+        false
+      ],
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "checkActiveGames": {
+      "aliases": [
+        "cag"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "checkQueue": {
+      "aliases": [
+        "cq",
+        "status"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "clearQueue": {
+      "aliases": [
+        "clrq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Clear the queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "clearQueueLobby": {
+      "aliases": [
+        "unsetQueueLobby, unsetQLobby",
+        "clearQLobby"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "clearSixMansData": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "dequeue": {
+      "aliases": [
+        "dq",
+        "lq",
+        "leaveq",
+        "leaveQ",
+        "unqueue",
+        "unq",
+        "uq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Remove yourself from the queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "disableQueues": {
+      "aliases": [
+        "stopQueue",
+        "sq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Disable queueing for the guild.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "editQueue": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "current_name"
+        },
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "new_name"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "points_per_play"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "points_per_win"
+        },
+        {
+          "annotation": "discord.channel.TextChannel",
+          "default": "<class 'inspect._empty'>",
+          "kind": "VAR_POSITIONAL",
+          "name": "channels"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "enableQueues": {
+      "aliases": [
+        "eq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Enable queueing for the guild.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "forceCancelGame": {
+      "aliases": [
+        "fcg"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Cancel the current game. Can only be used in a game channel unless a gameId is given.\nThe game will end with no points given to any of the players. The players with then be allowed to queue again.",
+      "hidden": false,
+      "max_concurrency": [
+        1,
+        "channel",
+        false
+      ],
+      "params": [
+        {
+          "annotation": "Optional[int]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "gameId"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "forceResult": {
+      "aliases": [
+        "fr"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": [
+        1,
+        "channel",
+        false
+      ],
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "forceTeamSelection": {
+      "aliases": [
+        "fts"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Forces a popped queue to restart a specified team selection.\n\nFormat: `[p]fts <team_selection> [game_id]`",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "sixMans.enums.GameMode",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "mode"
+        },
+        {
+          "annotation": "Optional[int]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "game_id"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "getCategory": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets the channel currently assigned as the transaction channel",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "getDefaultQueueMaxSize": {
+      "aliases": [
+        "getDQMaxSize",
+        "getDQMS",
+        "gdqms",
+        "dqms"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets the max size for all queues in the guild. (Default: 6)",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "getDefaultTeamSelection": {
+      "aliases": [
+        "getTeamSelection"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Get method for Six Mans team selection (Default: Random)",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "getHelperRole": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets the role currently assigned as the 6 Mans helper role",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "getQueueInfo": {
+      "aliases": [
+        "qi"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "inspect._empty",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "getQueueMaxSize": {
+      "aliases": [
+        "getQMaxSize",
+        "getQMS",
+        "gqms",
+        "qms"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets the max size for a specific queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "queue_name"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "getQueueNames": {
+      "aliases": [
+        "qn"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "getQueueTS": {
+      "aliases": [
+        "getQTS",
+        "getQueueTeamSelection",
+        "gqts"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the team selection mode for a specific queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "queue_name"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "getQueueTimeout": {
+      "aliases": [
+        "getQTO",
+        "gqto",
+        "qto"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets the player timeout in minutes for queues in the guild (Default: 240).",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "kickQueue": {
+      "aliases": [
+        "kq",
+        "fdq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Remove someone else from the queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.member.Member",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "listQueueBans": {
+      "aliases": [
+        "qbans"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "List all active queue bans.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 2
+    },
+    "lobbyInfo": {
+      "aliases": [
+        "li",
+        "gameInfo",
+        "gi"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Gets lobby info for the series that you are involved in",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "moreInfo": {
+      "aliases": [
+        "moreinfo",
+        "mi"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Provides more in-depth information regarding the Six Mans series",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "moveMe": {
+      "aliases": [
+        "smMove",
+        "moveme"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "preLoadData": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Reloads all data for the 6mans cog",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "queue": {
+      "aliases": [
+        "q"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Add yourself to the queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueBan": {
+      "aliases": [
+        "qban"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Ban a player from queueing for a specified number of minutes.\n\nFormat: `[p]queueBan <player> <minutes> [reason]`",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.member.Member",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "duration_minutes"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "reason"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 2
+    },
+    "queueLeaderBoard": {
+      "aliases": [
+        "qlb"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Get the top ten players in points for the specific queue.\n\nIf no queue name is given the list will be the top ten players across all queues.\nIf you're not in the top ten your name and rank will be shown at the bottom of the list.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueLeaderBoard day": {
+      "aliases": [
+        "daily"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Daily leader board. All games from the last 24 hours will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "queueLeaderBoard",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueLeaderBoard month": {
+      "aliases": [
+        "monthly",
+        "mnth"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Monthly leader board. All games from the last 30 days will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "queueLeaderBoard",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueLeaderBoard overall": {
+      "aliases": [
+        "all-time",
+        "alltime"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "All-time leader board",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "queueLeaderBoard",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueLeaderBoard week": {
+      "aliases": [
+        "weekly",
+        "wk"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Weekly leader board. All games from the last week will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "queueLeaderBoard",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueLeaderBoard year": {
+      "aliases": [
+        "yearly",
+        "yr"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Yearly leader board. All games from the last 365 days will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "queueLeaderBoard",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "queueMultiple": {
+      "aliases": [
+        "qm",
+        "queueAll",
+        "qa",
+        "forceQueue",
+        "fq"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Mass queueing for testing purposes",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.member.Member",
+          "default": "<class 'inspect._empty'>",
+          "kind": "VAR_POSITIONAL",
+          "name": "members"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "queueUnban": {
+      "aliases": [
+        "qunban"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Remove a queue ban from a player.\n\nFormat: `[p]queueUnban <player>`",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.member.Member",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 2
+    },
+    "rank": {
+      "aliases": [
+        "rnk",
+        "playerCard",
+        "pc"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Get your rank in points, wins, and games played for the specific queue.\n\nIf no queue name is given it will show your overall rank across all queues.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rank alltime": {
+      "aliases": [
+        "all-time",
+        "overall"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "All-time ranks",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[discord.member.Member]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "rank",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rank daily": {
+      "aliases": [
+        "day"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Daily ranks. All games from the last 24 hours will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[discord.member.Member]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "rank",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rank monthly": {
+      "aliases": [
+        "month",
+        "mnth"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Monthly ranks. All games from the last 30 days will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[discord.member.Member]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "rank",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rank weekly": {
+      "aliases": [
+        "week",
+        "wk"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Weekly ranks. All games from the last week will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[discord.member.Member]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "rank",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rank yearly": {
+      "aliases": [
+        "year",
+        "yr"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Yearly ranks. All games from the last 365 days will count",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "Optional[discord.member.Member]",
+          "default": "None",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "player"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "None",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": "rank",
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "rebuildPlayerTotals": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Restore all-time totals for players a past bug failed to record.\n\nOnly players whose first game came after the bug shipped are rebuilt from score history.\nEveryone else's totals are left exactly as they are. A file with every change is posted afterwards.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "removeQueue": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "KEYWORD_ONLY",
+          "name": "queue_name"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "scoreReport": {
+      "aliases": [
+        "sr",
+        "reportScore"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Report which team won the series. Can only be used in a game channel.\nOnly valid after 10 minutes have passed since the game started. Both teams will need to verify the results.\n\n`winning_team` must be either `Blue` or `Orange`",
+      "hidden": false,
+      "max_concurrency": [
+        1,
+        "channel",
+        false
+      ],
+      "params": [],
+      "parent": null,
+      "privilege_level": "NONE",
+      "usage": null,
+      "user_perms": null
+    },
+    "setCategory": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the category channel where all game channels will be created under",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.channel.CategoryChannel",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "category_channel"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "setDefaultQueueMaxSize": {
+      "aliases": [
+        "setDefaultQueueSize",
+        "setDefaultQMaxSize",
+        "setDefaultQMS",
+        "setDQMS",
+        "sdqms"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the default queue max size for the guild.\n\nThis will not change the queue max size for any queues. (Default: 6)",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "max_size"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "setDefaultTeamSelection": {
+      "aliases": [
+        "setTeamSelection"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Set method for Six Mans team selection (Default: Vote)\n\nValid team selection methods options:\n- **Random**: selects random teams\n- **Captains**: selects a captain for each team\n- **Vote**: players vote for team selection method after queue pops\n- **Balanced**: creates balanced teams from all participating players",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "inspect._empty",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "team_selection_method"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "setHelperRole": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the 6 Mans helper role. Anyone with this role will be able to see all the game channels that are created",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.role.Role",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "helper_role"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "setQueueLobby": {
+      "aliases": [
+        "setQLobby",
+        "setQVC"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "discord.channel.VoiceChannel",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "lobby_voice"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "setQueueMaxSize": {
+      "aliases": [
+        "setQueueSize",
+        "setQMaxSize",
+        "setQMS",
+        "sqms"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the max size for a queue (Default: 6)",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "queue_name"
+        },
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "KEYWORD_ONLY",
+          "name": "max_size"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "setQueueTS": {
+      "aliases": [
+        "setQTS",
+        "setQueueTeamSelection",
+        "sqts"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the team selection mode for a specific queue",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "str",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "queue_name"
+        },
+        {
+          "annotation": "sixMans.enums.GameMode",
+          "default": "<class 'inspect._empty'>",
+          "kind": "KEYWORD_ONLY",
+          "name": "team_selection"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "setQueueTimeout": {
+      "aliases": [
+        "setQTimeout",
+        "setQTO",
+        "sqto"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Sets the player timeout in seconds for queues in the guild (Default: 30m) .",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [
+        {
+          "annotation": "int",
+          "default": "<class 'inspect._empty'>",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "minutes"
+        }
+      ],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": null
+    },
+    "toggleAutoMove": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Toggle whether or not bot moves members to their assigned team voice channel",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "toggleVoteMethod": {
+      "aliases": [
+        "toggleReactToVote",
+        "tvm",
+        "trtv"
+      ],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Toggles team selection voting method between commands and reactions.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "unsetCategory": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Unsets the category channel. Game channels will not be created if this is not set",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    },
+    "unsetHelperRole": {
+      "aliases": [],
+      "bot_perms": 0,
+      "checks": [
+        "guild_only.<locals>.predicate"
+      ],
+      "help": "Unsets the 6 Mans helper role.",
+      "hidden": false,
+      "max_concurrency": null,
+      "params": [],
+      "parent": null,
+      "privilege_level": "ADMIN",
+      "usage": null,
+      "user_perms": 32
+    }
+  },
+  "listeners": [
+    "on_guild_channel_delete:on_guild_channel_delete",
+    "on_member_remove:on_member_remove",
+    "on_ready:on_ready"
+  ]
+}
