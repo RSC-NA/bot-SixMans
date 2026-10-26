@@ -7,7 +7,7 @@ from sixMans.queue import SixMansQueue
 # What a player has to do in the game channel once their queue pops, by team selection mode
 POPPED_NEXT_STEPS = {
     GameMode.VOTE: "Vote on how teams are picked. Team selection can't start until the vote ends.",
-    GameMode.CAPTAINS: "Two captains will take turns picking players. If you're a captain, you'll be pinged to pick.",
+    GameMode.CAPTAINS: "Two captains will take turns picking players. If you're a captain, the pick message shows when it's your turn.",
     GameMode.SELF_PICK: "Choose your team with the Blue or Orange button.",
     GameMode.RANDOM: "Teams are assigned at random. Check the channel for your team and the lobby info.",
     GameMode.BALANCED: "Teams are balanced automatically. Check the channel for your team and the lobby info.",
