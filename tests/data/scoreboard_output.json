@@ -161,12 +161,12 @@
         {
           "inline": true,
           "name": "Player",
-          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player7                  :**\n`7` **Player14                 :**\n`8` **Player6                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**"
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player7                  :**\n`7` **Player14                 :**\n`8` **Player6                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**"
         },
         {
           "inline": true,
           "name": "Stats",
-          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   7`  Wins: `  2`  GP: `  3` WP: `66.7%`\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   4`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   3`  Wins: `  1`  GP: `  2` WP: `50.0%`\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   2`  Wins: `  0`  GP: `  2` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
         }
       ],
       "flags": 0,
@@ -234,12 +234,12 @@
         {
           "inline": true,
           "name": "Player",
-          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player6                  :**\n`7` **Player8                  :**\n`8` **Player9                  :**\n`9` **Player10                 :**\n`10` **Player7                  :**\n`11` **Player11                 :**"
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player4                  :**\n`5` **Player5                  :**\n`6` **Player6                  :**\n`7` **Player8                  :**\n`8` **Player9                  :**\n`9` **Player10                 :**\n`10` **Player7                  :**"
         },
         {
           "inline": true,
           "name": "Stats",
-          "value": "Points: `  28`  Wins: ` 11`  GP: ` 19` WP: `57.9%`\nPoints: `  26`  Wins: ` 10`  GP: ` 18` WP: `55.6%`\nPoints: `  24`  Wins: `  9`  GP: ` 17` WP: `52.9%`\nPoints: `  22`  Wins: `  8`  GP: ` 16` WP: `50.0%`\nPoints: `  20`  Wins: `  7`  GP: ` 15` WP: `46.7%`\nPoints: `  18`  Wins: `  6`  GP: ` 14` WP: `42.9%`\nPoints: `  14`  Wins: `  4`  GP: ` 12` WP: `33.3%`\nPoints: `  12`  Wins: `  3`  GP: ` 11` WP: `27.3%`\nPoints: `  10`  Wins: `  2`  GP: ` 10` WP: `20.0%`\nPoints: `   9`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   8`  Wins: `  1`  GP: `  9` WP: `11.1%`"
+          "value": "Points: `  28`  Wins: ` 11`  GP: ` 19` WP: `57.9%`\nPoints: `  26`  Wins: ` 10`  GP: ` 18` WP: `55.6%`\nPoints: `  24`  Wins: `  9`  GP: ` 17` WP: `52.9%`\nPoints: `  22`  Wins: `  8`  GP: ` 16` WP: `50.0%`\nPoints: `  20`  Wins: `  7`  GP: ` 15` WP: `46.7%`\nPoints: `  18`  Wins: `  6`  GP: ` 14` WP: `42.9%`\nPoints: `  14`  Wins: `  4`  GP: ` 12` WP: `33.3%`\nPoints: `  12`  Wins: `  3`  GP: ` 11` WP: `27.3%`\nPoints: `  10`  Wins: `  2`  GP: ` 10` WP: `20.0%`\nPoints: `   9`  Wins: `  3`  GP: `  3` WP: `100% `"
         }
       ],
       "flags": 0,
@@ -269,12 +269,12 @@
         {
           "inline": true,
           "name": "Player",
-          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**\n\n`15` **Player14                 :**"
+          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n\n`15` **Player14                 :**"
         },
         {
           "inline": true,
           "name": "Stats",
-          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\nPoints: `  20`  Wins: `  5`  GP: ` 20` WP: `25.0%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
+          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
         }
       ],
       "flags": 0,
@@ -304,12 +304,12 @@
         {
           "inline": true,
           "name": "Player",
-          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**\n\n`15` **Player14                 :**"
+          "value": "`1` **Player20                 :**\n`2` **Player1                  :**\n`3` **Player2                  :**\n`4` **Player3                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player7                  :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n\n`15` **Player14                 :**"
         },
         {
           "inline": true,
           "name": "Stats",
-          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\nPoints: `  20`  Wins: `  5`  GP: ` 20` WP: `25.0%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
+          "value": "Points: `  50`  Wins: ` 25`  GP: ` 25` WP: `100% `\nPoints: `  38`  Wins: ` 14`  GP: ` 29` WP: `48.3%`\nPoints: `  36`  Wins: ` 13`  GP: ` 28` WP: `46.4%`\nPoints: `  34`  Wins: ` 12`  GP: ` 27` WP: `44.4%`\nPoints: `  32`  Wins: ` 11`  GP: ` 26` WP: `42.3%`\nPoints: `  30`  Wins: ` 10`  GP: ` 25` WP: `40.0%`\nPoints: `  28`  Wins: `  9`  GP: ` 24` WP: `37.5%`\nPoints: `  26`  Wins: `  8`  GP: ` 23` WP: `34.8%`\nPoints: `  24`  Wins: `  7`  GP: ` 22` WP: `31.8%`\nPoints: `  22`  Wins: `  6`  GP: ` 21` WP: `28.6%`\n\nPoints: `  12`  Wins: `  1`  GP: ` 16` WP: `6.2% `"
         }
       ],
       "flags": 0,
@@ -374,12 +374,12 @@
         {
           "inline": true,
           "name": "Player",
-          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player7                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player14                 :**\n`9` **Player8                  :**\n`10` **Player9                  :**\n`11` **Player10                 :**"
+          "value": "`1` **Player1                  :**\n`2` **Player2                  :**\n`3` **Player3                  :**\n`4` **Player7                  :**\n`5` **Player4                  :**\n`6` **Player5                  :**\n`7` **Player6                  :**\n`8` **Player14                 :**\n`9` **Player8                  :**\n`10` **Player9                  :**"
         },
         {
           "inline": true,
           "name": "Stats",
-          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
+          "value": "Points: `   8`  Wins: `  3`  GP: `  3` WP: `100% `\nPoints: `   6`  Wins: `  2`  GP: `  2` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   3`  Wins: `  1`  GP: `  1` WP: `100% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `\nPoints: `   1`  Wins: `  0`  GP: `  1` WP: `0.0% `"
         }
       ],
       "flags": 0,

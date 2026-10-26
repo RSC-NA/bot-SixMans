@@ -8,6 +8,8 @@ from sixMans.types import PlayerStats
 
 log = logging.getLogger("red.sixMans.scoreboard")
 
+LEADERBOARD_ROWS = 10
+
 
 async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, PlayerStats]], queue_name: str, team_size: int, games_played: int, lb_format: str) -> discord.Embed:
     embed = discord.Embed(
@@ -20,7 +22,10 @@ async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, Player
 
     playerStrings = []
     statStrings = []
+    shown: set[str] = set()
     for idx, player in enumerate(sorted_players):
+        if len(shown) == LEADERBOARD_ROWS:
+            break
         try:
             member: discord.Member = await commands.MemberConverter().convert(ctx, player[0])
         except (
@@ -30,6 +35,7 @@ async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, Player
             log.warning(f":x: Can't find player with id: {player[0]}")
             continue
 
+        shown.add(player[0])
         player_info = player[1]
         playerStrings.append(f"`{idx + 1}` **{member.display_name:25s}:**")
         try:
@@ -42,12 +48,10 @@ async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, Player
 
         statStrings.append(f"Points: `{player_info['Points']:4d}`  Wins: `{player_wins:3d}`  GP: `{player_gp:3d}` WP: `{player_wp:5s}`")
 
-        if idx + 1 > 10:
-            break
-
     author = ctx.author
     author_index = next((idx for idx, (player_id, _) in enumerate(sorted_players) if player_id == str(author.id)), None)
-    if author_index is not None and author_index > 9:
+    # Players who left are skipped above, so check what was shown rather than the author's rank
+    if author_index is not None and str(author.id) not in shown:
         author_info = sorted_players[author_index][1]
         playerStrings.append(f"\n`{author_index + 1}` **{author.display_name:25s}:**")
         try:
