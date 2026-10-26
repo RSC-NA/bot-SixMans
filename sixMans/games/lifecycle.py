@@ -99,16 +99,7 @@ class GameLifecycle:
 
         log.debug(f"Creating game. Guild: {ctx.guild.id} Queue: {six_mans_queue.name}")
         game = await self.create_game(ctx.guild, six_mans_queue, prefix=ctx.prefix)
-        if game is None:
-            return False
-
-        # Remove players from any other queue they were in
-        for player in game.players:
-            for queue in self.queues[ctx.guild]:
-                if player in queue.queue:
-                    await self._remove_from_queue(player, queue)
-
-        return True
+        return game is not None
 
     async def _get_departed_players(self, guild: discord.Guild, six_mans_queue: SixMansQueue) -> list[discord.Member]:
         """Return the players at the front of the queue who are no longer in the guild."""
@@ -178,6 +169,14 @@ class GameLifecycle:
                 )
             )
             return None
+
+        # Take the players out of any other queue they were waiting in before team selection, which
+        # can wait on players for 15 minutes or more. Until then another queue could pop with the same
+        # player and put them in two games at once.
+        for player in players:
+            for queue in self.queues[guild]:
+                if player in queue.queue:
+                    await self._remove_from_queue(player, queue)
 
         log.debug(f"Saving game: {game.id} Players: {game.players}")
         self.games[guild].append(game)

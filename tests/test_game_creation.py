@@ -153,6 +153,48 @@ class TestCreateGameValidatesMembers:
         assert game.players == set(players)
 
 
+class TestCreateGameLeavesOtherQueues:
+    """Popped players must leave their other queues before team selection starts.
+
+    Team selection can wait on players for 15 minutes or more. Removing them only
+    afterwards let another queue pop with the same player in it.
+    """
+
+    async def test_players_leave_other_queues_before_team_selection(self, cog, guild, players):
+        q = make_queue(guild, players)
+        other = make_queue(guild, [players[0], make_member(50, guild)])
+        cog.queues[guild] = [q, other]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+
+        still_queued = []
+
+        async def record_other_queue(game, *args, **kwargs):
+            still_queued.extend(p for p in players if p in other.queue)
+
+        with (
+            patch.object(Game, "create_game_channels", new=AsyncMock()),
+            patch.object(Game, "process_team_selection_method", new=record_other_queue),
+        ):
+            game = await cog.create_game(guild, q)
+
+        assert game is not None
+        assert still_queued == [], "Players were still in another queue during team selection"
+        assert [p.id for p in other.queue.queue] == [50]
+
+    async def test_channel_failure_keeps_other_queue_places(self, cog, guild, players):
+        """A failed pop returns players to this queue, so they keep their places elsewhere too."""
+        q = make_queue(guild, players)
+        other = make_queue(guild, [players[0]])
+        cog.queues[guild] = [q, other]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+
+        boom = discord.HTTPException(MagicMock(status=500), "boom")
+        with patch.object(Game, "create_game_channels", new=AsyncMock(side_effect=boom)):
+            await cog.create_game(guild, q)
+
+        assert players[0] in other.queue
+
+
 class TestCreateGameRollback:
     """Channel creation failures must not strand players or leave orphan channels."""
 
