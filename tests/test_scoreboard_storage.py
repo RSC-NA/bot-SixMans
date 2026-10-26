@@ -91,6 +91,15 @@ class TestMigration:
         assert saved(settings_path, guild)["QueueStats"] == before
         assert cog.scoreboard.queue_games_played(guild, GENERAL) == 37
 
+    async def test_already_migrated_guild_is_not_refilled_from_frozen_fields(self, config, guild, data, settings_path):
+        data["ScoreboardSchema"] = SCHEMA_VERSION
+        data["QueueStats"] = {}
+
+        cog = await build_cog(config, guild, data)
+
+        assert saved(settings_path, guild)["QueueStats"] == {}
+        assert cog.scoreboard.queue_games_played(guild, GENERAL) == 0
+
     async def test_keeps_entries_from_an_interrupted_migration(self, config, guild, data, settings_path):
         partial = {str(GENERAL): {"Name": "General", "Deleted": False, "GamesPlayed": 99, "Players": {"1": {"Points": 1, "Wins": 0, "GamesPlayed": 1}}}}
         data["QueueStats"] = partial
@@ -186,6 +195,17 @@ class TestDeletedQueues:
 
 
 class TestRollback:
+    async def test_saving_queues_keeps_the_frozen_stats(self, cog, guild, data, settings_path):
+        """Any queue admin command rewrites every saved queue. The frozen stats must survive that."""
+        await finish_game(cog, guild, GENERAL, [1, 2, 3, 4, 5, 6])
+        ctx = MagicMock(guild=guild, send=AsyncMock())
+
+        await cog.editQueue.callback(cog, ctx, "General", "General", 1, 2, guild.get_channel(10))
+
+        for queue_id, queue in saved(settings_path, guild)["Queues"].items():
+            assert queue["Players"] == data["Queues"][queue_id]["Players"]
+            assert queue["GamesPlayed"] == data["Queues"][queue_id]["GamesPlayed"]
+
     async def test_pre_scoreboard_code_can_still_load_saved_queues(self, cog, guild, settings_path):
         """Code from before the move parses every saved queue with QueueData, which requires these fields."""
         await finish_game(cog, guild, GENERAL, [1, 2, 3, 4, 5, 6])
