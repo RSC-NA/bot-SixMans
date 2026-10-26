@@ -175,7 +175,7 @@ class QueueCommands(QueueState):
     @commands.command(aliases=["getQTS", "getQueueTeamSelection", "gqts"])
     @checks.admin_or_permissions()
     async def getQueueTS(self, ctx: Context, queue_name: str):
-        """Sets the team selection mode for a specific queue"""
+        """Gets the team selection mode for a specific queue"""
         if not ctx.guild:
             return
 

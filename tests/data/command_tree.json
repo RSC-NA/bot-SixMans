@@ -475,7 +475,7 @@
       "checks": [
         "guild_only.<locals>.predicate"
       ],
-      "help": "Sets the team selection mode for a specific queue",
+      "help": "Gets the team selection mode for a specific queue",
       "hidden": false,
       "max_concurrency": null,
       "params": [

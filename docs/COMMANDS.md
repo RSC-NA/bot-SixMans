@@ -498,9 +498,7 @@ the command help text alone.
   default is 240 minutes; the actual default is 30
   (`PLAYER_TIMEOUT_TIME = 1800` seconds). `[p]getDefaultTeamSelection`'s
   docstring says the default is `Random`; it is `Vote`. `[p]setQueueTimeout`'s
-  docstring says "in seconds"; the argument is in minutes. `[p]getQueueTS`
-  reuses the setter's docstring ("Sets the team selection mode…") but only
-  reads.
+  docstring says "in seconds"; the argument is in minutes.
 - **`ephemeral=True` does nothing on prefix commands.** `[p]queueBan`'s
   confirmation and `[p]queue`'s "you are banned" notice pass `ephemeral=True`,
   which discord.py drops when there is no interaction. Both are posted publicly
