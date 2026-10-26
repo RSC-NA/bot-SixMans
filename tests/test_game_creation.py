@@ -11,7 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 import pytest
 
+from sixMans.enums import GameMode
 from sixMans.game import Game
+from sixMans.games.embeds import POPPED_NEXT_STEPS, queue_popped_embed
 from sixMans.queue import SixMansQueue
 from sixMans.sixMans import SixMans
 
@@ -276,6 +278,80 @@ class TestQueueTimeoutsAfterPop:
         assert new is not old
         assert not new.done()
         new.cancel()
+
+
+async def fake_create_channels(self, category=None):
+    """Stand in for channel creation, leaving the channels a real pop would."""
+    self.textChannel = MagicMock(spec=discord.TextChannel)
+    self.textChannel.name = "123-test-queue-6-mans"
+    self.textChannel.jump_url = "https://discord.com/channels/1/100"
+    self.voiceChannels = []
+    for channel_id, name in ((201, "Blue Team"), (202, "Orange Team"), (203, "General VC")):
+        vc = MagicMock(spec=discord.VoiceChannel)
+        vc.name = name
+        vc.jump_url = f"https://discord.com/channels/1/{channel_id}"
+        self.voiceChannels.append(vc)
+
+
+class TestQueuePoppedDM:
+    """Players often queue and step away, so a pop DMs each of them where to go."""
+
+    async def pop(self, cog, guild, players):
+        q = make_queue(guild, players)
+        cog.queues[guild] = [q]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+        guild.icon = None
+        with (
+            patch.object(Game, "create_game_channels", new=fake_create_channels),
+            patch.object(Game, "process_team_selection_method", new=AsyncMock()),
+        ):
+            return await cog.create_game(guild, q)
+
+    async def test_every_player_is_dmed_the_game_channel(self, cog, guild, players):
+        game = await self.pop(cog, guild, players)
+
+        assert game is not None
+        for player in players:
+            player.send.assert_awaited_once()
+            embed = player.send.await_args.kwargs["embed"]
+            assert game.textChannel.jump_url in embed.description
+            assert any(f.name == "Voice" and "General VC" in f.value for f in embed.fields)
+            assert embed.footer.text == f"Game ID: {game.id}"
+
+    async def test_closed_dms_do_not_stop_the_game(self, cog, guild, players):
+        players[0].send = AsyncMock(side_effect=discord.Forbidden(MagicMock(status=403), "Cannot send messages to this user"))
+
+        game = await self.pop(cog, guild, players)
+
+        assert game is not None
+        assert cog.games[guild] == [game]
+        for player in players[1:]:
+            player.send.assert_awaited_once()
+
+    async def test_failed_pop_sends_no_dms(self, cog, guild, players):
+        q = make_queue(guild, players)
+        cog.queues[guild] = [q]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+
+        boom = discord.HTTPException(MagicMock(status=500), "boom")
+        with patch.object(Game, "create_game_channels", new=AsyncMock(side_effect=boom)):
+            await cog.create_game(guild, q)
+
+        for player in players:
+            player.send.assert_not_called()
+
+    async def test_default_mode_shows_the_queues_mode(self, guild, players):
+        guild.icon = None
+        q = make_queue(guild, players)
+        q.teamSelection = GameMode.CAPTAINS
+        game = Game(queue=q, players=players, teamSelection=GameMode.DEFAULT)
+
+        embed = queue_popped_embed(game)
+
+        team_selection = next(f.value for f in embed.fields if f.name == "Team Selection")
+        assert team_selection is not None
+        assert GameMode.CAPTAINS.value in team_selection
+        assert POPPED_NEXT_STEPS[GameMode.CAPTAINS] in team_selection
 
 
 class TestCreateGameRollback:

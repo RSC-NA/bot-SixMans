@@ -78,7 +78,9 @@ Aliases: `q`
 Add yourself to the queue attached to the current text channel. Fails if
 queueing is disabled for the guild, if you are queue-banned, if you are already
 in this queue, or if you are already in an active game. When the queue reaches
-its max size it pops and a game is created.
+its max size it pops and a game is created. Every player in the game is DM'd a
+link to the game channel and what to do next for its team selection mode
+(silently skipped if their DMs are closed).
 
 ### `[p]dequeue`
 Aliases: `dq`, `lq`, `leaveq`, `leaveQ`, `unqueue`, `unq`, `uq`

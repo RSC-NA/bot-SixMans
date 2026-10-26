@@ -11,6 +11,7 @@ from sixMans.constants import CHANNEL_SLEEP_TIME
 from sixMans.embeds import ErrorEmbed, WarningEmbed
 from sixMans.enums import GameState, Winner
 from sixMans.game import Game
+from sixMans.games.embeds import queue_popped_embed
 from sixMans.models.game import GameData
 from sixMans.queue import SixMansQueue
 from sixMans.types import PlayerStats
@@ -196,6 +197,8 @@ class GameLifecycle:
         for player in players:
             await self._cancel_timeout_task(player, six_mans_queue)
 
+        await self._dm_popped_players(game)
+
         log.debug(f"Saving game: {game.id} Players: {game.players}")
         self.games[guild].append(game)
         await self._save_games(guild, self.games[guild])
@@ -204,6 +207,20 @@ class GameLifecycle:
         # Save again once teams are selected
         await self._save_games(guild, self.games[guild])
         return game
+
+    async def _dm_popped_players(self, game: Game):
+        """DM every player that their queue popped. Players often queue, step away and miss the pop."""
+        embed = queue_popped_embed(game)
+
+        async def send(player: discord.Member):
+            try:
+                await player.send(embed=embed)
+            except (discord.HTTPException, discord.Forbidden) as exc:
+                # Usually DMs from server members are turned off
+                log.debug(f"Unable to DM {player.id} that game {game.id} popped: {exc}")
+
+        # Sent together so team selection isn't held up waiting on each DM in turn
+        await asyncio.gather(*(send(player) for player in game.players))
 
     def _queue_stats_lookup(self, guild: discord.Guild) -> Callable[[int, int], PlayerStats | None]:
         return lambda queue_id, player_id: self.scoreboard.queue_player(guild, queue_id, player_id)
