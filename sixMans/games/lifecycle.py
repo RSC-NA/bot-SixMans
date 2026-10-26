@@ -232,8 +232,8 @@ class GameLifecycle:
             log.info(f"[{guild.name}] Game {game.id} was reloaded mid-report. Scoring the live object.")
             game = live
 
-        # `_load_queues()` also rebuilds queue objects, so the caller may be holding one that is no
-        # longer the object `_save_queues` persists. Re-resolve by id or the win would be dropped.
+        # The caller may be holding a queue object that is no longer the one `_save_queues`
+        # persists. Re-resolve by id or the win would be dropped.
         live_queue = next((q for q in self.queues.get(guild, []) if q.id == six_mans_queue.id), None)
         if live_queue is not None:
             six_mans_queue = live_queue
@@ -393,8 +393,8 @@ class GameLifecycle:
                 known = existing.get(int(key))
                 if known is not None:
                     log.debug(f"Game {key} is already loaded. Reusing the in-memory object.")
-                    # `_load_queues()` rebuilt the queue objects, so the reused game would
-                    # otherwise keep scoring against a SixMansQueue that is no longer saved.
+                    # Point the reused game at the live queue object, so it never keeps scoring
+                    # against a SixMansQueue that is no longer saved.
                     known.queue = queue
                     game_list.append(known)
                     continue

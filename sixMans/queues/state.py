@@ -136,13 +136,23 @@ class QueueState:
                 del self.timeout_tasks[player]
 
     async def _load_queues(self):
+        """Load persisted queues into memory, keeping any `SixMansQueue` objects already there.
+
+        This runs from `cog_load()` but also from the `on_ready` listener, which fires after every
+        reconnect. Rebuilding every queue would empty it of waiting players, and orphan their timeout
+        tasks and any game holding the old object. Queues already in memory are updated in place by
+        id instead, and only new ids are constructed. Nothing is swapped in until every guild has
+        loaded, so commands never see a guild without its queues.
+        """
         log.info("Preloading existing queues...")
         # await self.bot.wait_until_ready()
-        self.queues = {}
+        loaded: dict[discord.Guild, list[SixMansQueue]] = {}
 
         for guild in self.bot.guilds:
             log.debug(f"Getting queues for guild: {guild}")
-            self.queues[guild] = []
+            existing = {q.id: q for q in self.queues.get(guild, [])}
+            guild_queues: list[SixMansQueue] = []
+            loaded[guild] = guild_queues
             self.games.setdefault(guild, [])
 
             # Queue settings
@@ -187,30 +197,43 @@ class QueueState:
                 log.debug(f"Player_Dict: {player_dict}")
                 log.debug(f"Points: {dict(q.Points)}")
 
-                six_mans_queue = SixMansQueue(
-                    id=int(key),
-                    name=q.Name,
-                    guild=guild,
-                    channels=queue_channels,
-                    points=dict(q.Points),
-                    legacy_games_played=q.GamesPlayed,
-                    legacy_players=player_dict,
-                    maxSize=queue_size,
-                    teamSelection=team_selection,
-                    category=category,
-                    lobby_vc=lobby_vc,
-                )
-
-                six_mans_queue.id = int(key)
+                six_mans_queue = existing.get(int(key))
+                if six_mans_queue is not None:
+                    log.debug(f"Queue {key} is already loaded. Updating its settings in place.")
+                    six_mans_queue.name = q.Name
+                    six_mans_queue.channels = queue_channels
+                    six_mans_queue.points = dict(q.Points)
+                    six_mans_queue.legacy_games_played = q.GamesPlayed
+                    six_mans_queue.legacy_players = player_dict
+                    six_mans_queue.maxSize = queue_size
+                    six_mans_queue.teamSelection = team_selection
+                    six_mans_queue.category = category
+                    six_mans_queue.lobby_vc = lobby_vc
+                else:
+                    six_mans_queue = SixMansQueue(
+                        id=int(key),
+                        name=q.Name,
+                        guild=guild,
+                        channels=queue_channels,
+                        points=dict(q.Points),
+                        legacy_games_played=q.GamesPlayed,
+                        legacy_players=player_dict,
+                        maxSize=queue_size,
+                        teamSelection=team_selection,
+                        category=category,
+                        lobby_vc=lobby_vc,
+                    )
 
                 exists = False
-                for idx, gq in enumerate(self.queues[guild]):
+                for idx, gq in enumerate(guild_queues):
                     if gq.id == int(key):
-                        self.queues[guild][idx] = six_mans_queue
+                        guild_queues[idx] = six_mans_queue
                         exists = True
 
                 if not exists:
-                    self.queues[guild].append(six_mans_queue)
+                    guild_queues.append(six_mans_queue)
+
+        self.queues = loaded
 
     async def _queues(self, guild: discord.Guild):
         return await self.config.guild(guild).Queues()

@@ -231,7 +231,7 @@ class TestFinishGame:
         assert cog.games[guild] == []
 
     async def test_uses_the_live_queue_object_after_a_reload(self, cog, guild, players):
-        """`_load_queues()` rebuilds queues too, so a held object can have stale settings like points."""
+        """A held queue object that is no longer the live one can have stale settings like points."""
         stale_queue = SixMansQueue(
             name="Test Queue",
             guild=guild,

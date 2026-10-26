@@ -473,3 +473,44 @@ class TestRebuildCommand:
 
         ctx.bot.wait_for.assert_not_awaited()
         ctx.send.assert_awaited_once_with("No player totals need rebuilding.")
+
+
+# ---------------------------------------------------------------------------
+# Reloading queues. Uses this module's cog, which is loaded from a real config.
+# ---------------------------------------------------------------------------
+
+
+class TestReloadKeepsQueues:
+    """`on_ready` reloads queues after every reconnect. Players waiting in a queue must survive it."""
+
+    async def test_reload_keeps_waiting_players_and_queue_object(self, cog, guild):
+        general = next(q for q in cog.queues[guild] if q.id == GENERAL)
+        player = make_member(1, guild)
+        general._put(player)
+
+        await cog._load_queues()
+
+        reloaded = next(q for q in cog.queues[guild] if q.id == GENERAL)
+        assert reloaded is general
+        assert player in reloaded.queue
+
+    async def test_reload_applies_changed_settings(self, cog, guild, config):
+        general = next(q for q in cog.queues[guild] if q.id == GENERAL)
+        queues = await config.guild(guild).Queues()
+        queues[str(GENERAL)]["Name"] = "Renamed"
+        queues[str(GENERAL)]["Points"] = {"Play": 5, "Win": 10}
+        await config.guild(guild).Queues.set(queues)
+
+        await cog._load_queues()
+
+        assert general.name == "Renamed"
+        assert general.points == {"Play": 5, "Win": 10}
+
+    async def test_reload_drops_queues_removed_from_config(self, cog, guild, config):
+        queues = await config.guild(guild).Queues()
+        del queues[str(LOWER)]
+        await config.guild(guild).Queues.set(queues)
+
+        await cog._load_queues()
+
+        assert [q.id for q in cog.queues[guild]] == [GENERAL]
