@@ -25,9 +25,15 @@ def left_server():
     return set()
 
 
+@pytest.fixture
+def lookups():
+    return []
+
+
 @pytest.fixture(autouse=True)
-def member_lookup(left_server):
+def member_lookup(left_server, lookups):
     async def convert(_self, _ctx, argument):
+        lookups.append(int(argument))
         if int(argument) in left_server:
             raise commands.MemberNotFound(argument)
         return make_member(int(argument))
@@ -70,3 +76,13 @@ async def test_author_outside_the_top_rows_gets_their_own_line():
 
     assert rows(embed)[-1].startswith("`14` **Player14")
     assert len(rows(embed)) == 11
+
+
+async def test_stops_looking_up_players_after_the_top_twenty(left_server, lookups):
+    """Each lookup of a player who left is a Discord query, so a board full of them must stay bounded."""
+    left_server.update(range(1, 18))
+
+    embed = await leaderboard_embed(ctx_for(500), board(100), "General", 6, 5, "All-time")
+
+    assert lookups == list(range(1, 21))
+    assert [row.split("`")[1] for row in rows(embed)] == ["18", "19", "20"]

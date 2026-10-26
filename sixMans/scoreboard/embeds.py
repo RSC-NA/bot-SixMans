@@ -9,6 +9,8 @@ from sixMans.types import PlayerStats
 log = logging.getLogger("red.sixMans.scoreboard")
 
 LEADERBOARD_ROWS = 10
+# Looking up a player who has left the server costs a Discord member query, so only look this far down
+LEADERBOARD_MAX_LOOKUPS = 20
 
 
 async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, PlayerStats]], queue_name: str, team_size: int, games_played: int, lb_format: str) -> discord.Embed:
@@ -23,7 +25,7 @@ async def leaderboard_embed(ctx: Context, sorted_players: list[tuple[str, Player
     playerStrings = []
     statStrings = []
     shown: set[str] = set()
-    for idx, player in enumerate(sorted_players):
+    for idx, player in enumerate(sorted_players[:LEADERBOARD_MAX_LOOKUPS]):
         if len(shown) == LEADERBOARD_ROWS:
             break
         try:
