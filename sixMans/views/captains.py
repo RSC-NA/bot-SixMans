@@ -144,32 +144,21 @@ class CaptainsView(SerialEditView):
             return
         log.debug(f"{interaction.user.display_name} picked {pick.display_name}")
 
-        # Remove player from pickable as soon as possible. Help alleviate a race condition
-        self.pickable.remove(pick)
+        # Validate the team isn't already full before taking the player off the pick list, or a
+        # refused pick would leave them on no team at all
+        team, team_name = (self.blue, "Blue") if self.picking in self.blue else (self.orange, "Orange")
+        if len(team) >= self.team_size:
+            log.debug(f"{team_name} team already has {self.team_size} players on it.")
+            # Something is wrong, try switching the picking captain
+            await self.swap_picking()
+            await interaction.response.send_message(
+                content=f"You already have the maximum number of players ({self.team_size})",
+                ephemeral=True,
+            )
+            return
 
-        # Validate teams aren't already full before assigning player to team
-        if self.picking in self.blue:
-            if len(self.blue) >= self.team_size:
-                log.debug(f"Blue team already has {self.team_size} players on it.")
-                await interaction.response.send_message(
-                    content=f"You already have the maximum number of players ({self.team_size})",
-                    ephemeral=True,
-                )
-                # Something is wrong, try switching the picking captain
-                await self.swap_picking()
-                return
-            self.blue.append(pick)
-        else:
-            if len(self.orange) >= self.team_size:
-                log.debug(f"Orange team already has {self.team_size} players on it.")
-                await interaction.response.send_message(
-                    content=f"You already have the maximum number of players ({self.team_size})",
-                    ephemeral=True,
-                )
-                # Something is wrong, try switching the picking captain
-                await self.swap_picking()
-                return
-            self.orange.append(pick)
+        self.pickable.remove(pick)
+        team.append(pick)
 
         self.embed.clear_fields()
         self.embed.add_field(name="Blue Team", value=utils.format_team_mentions(self.blue, self.captains), inline=True)
