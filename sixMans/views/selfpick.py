@@ -60,7 +60,7 @@ class SelfPickingView(SerialEditView):
         no_players_str = "[No Players]"
         blue_players = "\n".join(p.mention for p in self.blue) if self.blue else no_players_str
         orange_players = "\n".join(p.mention for p in self.orange) if self.orange else no_players_str
-        unplaced_players = ", ".join(p.mention for p in self.players) if self.players else no_players_str
+        unplaced_players = ", ".join(p.mention for p in self.unplaced) if self.unplaced else no_players_str
 
         ts_emoji = get_emoji(0x1F530)
 

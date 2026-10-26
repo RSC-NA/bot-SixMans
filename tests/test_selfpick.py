@@ -5,6 +5,7 @@ Covers bug: a completed pick left `finished` False, so game.self_picking_teams()
 reported an error and assigned no teams.
 Covers bug: the player check was named `on_interaction`, which discord.py never
 calls, so anyone who could see the channel could take a team slot.
+Covers bug: the "Unplaced Players" field listed every player, placed or not.
 """
 
 from typing import cast
@@ -117,3 +118,17 @@ async def test_non_player_cannot_pick_team():
     outsider.response.send_message.assert_called_once()
 
     assert await view.interaction_check(make_interaction(players[0])) is True
+
+
+@pytest.mark.asyncio
+async def test_unplaced_field_lists_only_unplaced_players():
+    players = [make_member(f"P{i}", i) for i in range(1, 7)]
+    view = SelfPickingView(game=as_game(FakeGame(players=players)))
+    await view.prompt()
+
+    await view.pick_blue.callback(make_interaction(players[0]))
+
+    unplaced = next(f.value for f in view.embed.fields if f.name == "Unplaced Players")
+    assert unplaced is not None
+    assert players[0].mention not in unplaced
+    assert all(p.mention in unplaced for p in players[1:])
