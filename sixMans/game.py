@@ -83,6 +83,8 @@ class Game:
         self.state: GameState = state
         self.prefix: str = prefix
         self.winner: Winner = winner
+        # Set by balanced team selection. Not persisted, so a reloaded game starts without one.
+        self.balance_score: float | None = None
 
         # Game  Mode
         if teamSelection:
@@ -447,7 +449,8 @@ class Game:
                 team_score += player_scores[player]["Score"]
 
             team_diff = abs(avg_team_score - team_score)
-            if balance_diff:
+            # A perfectly balanced 0 is falsy, so compare against None
+            if balance_diff is not None:
                 if team_diff < balance_diff:
                     balance_diff = team_diff
                     balanced_teams = [a_team]
@@ -459,7 +462,7 @@ class Game:
 
         # return balanced team
         self.state = GameState.ONGOING
-        return balanced_teams, team_diff
+        return balanced_teams, balance_diff
 
     def get_player_scores(self):
         # Get Player Stats
