@@ -68,8 +68,12 @@ class QueueState:
         embed = player_removed_embed(player, six_mans_queue)
         await six_mans_queue.send_message(embed=embed)
 
-        # Don't leave the timeout task sleeping for the rest of its duration. `_auto_remove_from_queue`
-        # calls this from inside its own timeout task, which must not cancel itself.
+        # Don't leave the timeout task sleeping for the rest of its duration.
+        await self._cancel_timeout_task(player, six_mans_queue)
+
+    async def _cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
+        """Stop and forget a player's timeout for a queue, if they have one."""
+        # `_auto_remove_from_queue` reaches this from inside its own timeout task, which must not cancel itself.
         task = self.timeout_tasks.get(player, {}).get(six_mans_queue)
         if task and task is not asyncio.current_task():
             task.cancel()
@@ -112,6 +116,9 @@ class QueueState:
         six_mans_queue: SixMansQueue,
         time=PLAYER_TIMEOUT_TIME,
     ):
+        # Replace any earlier timeout rather than orphan it. Left running, it fires on its own
+        # schedule and removes the player early.
+        await self._cancel_timeout_task(player, six_mans_queue)
         self.timeout_tasks.setdefault(player, {})
         self.timeout_tasks[player][six_mans_queue] = asyncio.create_task(self.player_queue_timeout(player, six_mans_queue, time))
 

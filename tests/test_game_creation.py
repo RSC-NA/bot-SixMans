@@ -5,6 +5,7 @@ Covers the failure modes around a queued player leaving the guild: Discord retur
 abort game creation and leave orphaned channels behind.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
@@ -193,6 +194,59 @@ class TestCreateGameLeavesOtherQueues:
             await cog.create_game(guild, q)
 
         assert players[0] in other.queue
+
+
+class TestQueueTimeoutsAfterPop:
+    """A popped player's queue timeout must not fire later and remove them after they queue again."""
+
+    async def test_pop_cancels_timeouts_for_popped_queue(self, cog, guild, players):
+        q = make_queue(guild, players)
+        cog.queues[guild] = [q]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+        tasks = {p: asyncio.create_task(asyncio.sleep(3600)) for p in players}
+        cog.timeout_tasks = {p: {q: t} for p, t in tasks.items()}
+
+        with (
+            patch.object(Game, "create_game_channels", new=AsyncMock()),
+            patch.object(Game, "process_team_selection_method", new=AsyncMock()),
+        ):
+            game = await cog.create_game(guild, q)
+        await asyncio.sleep(0)
+
+        assert game is not None
+        assert all(t.cancelled() for t in tasks.values())
+        assert cog.timeout_tasks == {}
+
+    async def test_channel_failure_keeps_timeouts_running(self, cog, guild, players):
+        """Players returned to the queue keep their original timeout."""
+        q = make_queue(guild, players)
+        cog.queues[guild] = [q]
+        guild.get_member = MagicMock(side_effect=lambda pid: players[pid - 1])
+        tasks = {p: asyncio.create_task(asyncio.sleep(3600)) for p in players}
+        cog.timeout_tasks = {p: {q: t} for p, t in tasks.items()}
+
+        boom = discord.HTTPException(MagicMock(status=500), "boom")
+        with patch.object(Game, "create_game_channels", new=AsyncMock(side_effect=boom)):
+            await cog.create_game(guild, q)
+        await asyncio.sleep(0)
+
+        assert not any(t.done() for t in tasks.values())
+        for t in tasks.values():
+            t.cancel()
+
+    async def test_new_timeout_replaces_earlier_one(self, cog, guild, players):
+        q = make_queue(guild)
+        old = asyncio.create_task(asyncio.sleep(3600))
+        cog.timeout_tasks = {players[0]: {q: old}}
+
+        await cog.create_timeout_task(players[0], q, 3600)
+        await asyncio.sleep(0)
+
+        new = cog.timeout_tasks[players[0]][q]
+        assert old.cancelled()
+        assert new is not old
+        assert not new.done()
+        new.cancel()
 
 
 class TestCreateGameRollback:

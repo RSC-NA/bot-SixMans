@@ -41,6 +41,7 @@ class GameLifecycle:
         async def _get_automove(self, guild: discord.Guild) -> bool: ...
         async def _get_q_lobby_vc(self, guild: discord.Guild) -> discord.VoiceChannel | None: ...
         async def _remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue): ...
+        async def _cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue): ...
 
     def get_game_by_id(self, guild: discord.Guild, game_id: int) -> Game | None:
         log.debug(f"Fetching Game ID: {game_id}")
@@ -177,6 +178,11 @@ class GameLifecycle:
             for queue in self.queues[guild]:
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
+
+        # `_get()` left their timeouts for this queue running. If one fires after the player has
+        # finished the game and queued again, it removes them early on the old schedule.
+        for player in players:
+            await self._cancel_timeout_task(player, six_mans_queue)
 
         log.debug(f"Saving game: {game.id} Players: {game.players}")
         self.games[guild].append(game)
