@@ -246,3 +246,14 @@ class TestUnloadedGuild:
         assert stats[str(GENERAL)]["GamesPlayed"] == 37
         assert stats[str(DUELS)]["Deleted"] is True
         assert saved(settings_path, guild)["ScoreboardSchema"] == SCHEMA_VERSION
+
+    async def test_rebuild_for_a_guild_missed_at_startup_keeps_its_stats(self, config, guild, data, settings_path):
+        await build_cog(config, guild, data)
+        scoreboard = Scoreboard(config)
+        general = SixMansQueue("General", guild, [], {"Play": 1, "Win": 2}, 6, id=GENERAL)
+
+        await scoreboard.rebuild_totals(guild, [general], apply=True)
+
+        stats = saved(settings_path, guild)["QueueStats"]
+        assert stats[str(DUELS)] == {"Name": "Duels", "Deleted": False, "GamesPlayed": 5, "Players": data["Queues"][str(DUELS)]["Players"]}
+        assert stats[str(GENERAL)]["GamesPlayed"] == 37
