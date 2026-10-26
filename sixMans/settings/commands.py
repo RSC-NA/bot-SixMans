@@ -314,7 +314,7 @@ class SettingsCommands(GuildSettings):
         await ctx.send("Done")
 
     @commands.guild_only()
-    @commands.command(aliases=["unsetQueueLobby, unsetQLobby", "clearQLobby"])
+    @commands.command(aliases=["unsetQueueLobby", "unsetQLobby", "clearQLobby"])
     @checks.admin_or_permissions(manage_guild=True)
     async def clearQueueLobby(self, ctx: Context):
         if not ctx.guild:

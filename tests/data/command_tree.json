@@ -115,7 +115,8 @@
     },
     "clearQueueLobby": {
       "aliases": [
-        "unsetQueueLobby, unsetQLobby",
+        "unsetQueueLobby",
+        "unsetQLobby",
         "clearQLobby"
       ],
       "bot_perms": 0,

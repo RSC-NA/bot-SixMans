@@ -403,14 +403,9 @@ Set the shared lobby voice channel. Players are moved back into it when a game's
 voice channels are deleted, and (with AutoMove on) after a game is scored.
 
 ### `[p]clearQueueLobby`
-Aliases: `clearQLobby`
+Aliases: `unsetQueueLobby`, `unsetQLobby`, `clearQLobby`
 
 Clear the lobby voice channel.
-
-> The alias list also contains the string `"unsetQueueLobby, unsetQLobby"`.
-> Because it is one string containing a comma and a space rather than two
-> separate aliases, neither `unsetQueueLobby` nor `unsetQLobby` can be invoked —
-> only `clearQueueLobby` and `clearQLobby` work.
 
 ### `[p]setDefaultTeamSelection <team_selection_method>`
 Aliases: `setTeamSelection`
