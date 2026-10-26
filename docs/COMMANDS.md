@@ -1,8 +1,17 @@
 # sixMans Command Reference
 
-Every command in the `sixMans` cog, as implemented in [sixMans/sixMans.py](../sixMans/sixMans.py)
-and, for leaderboards, ranks and `[p]rebuildPlayerTotals`,
-[sixMans/scoreboard/commands.py](../sixMans/scoreboard/commands.py).
+Every command in the `sixMans` cog. The cog in [sixMans/sixMans.py](../sixMans/sixMans.py) inherits
+its commands from one module per area:
+
+- Queue setup, joining and leaving, and helper queue commands:
+  [sixMans/queues/commands.py](../sixMans/queues/commands.py)
+- Queue bans: [sixMans/queues/bans.py](../sixMans/queues/bans.py)
+- Score reports, cancels, lobby info and helper game commands:
+  [sixMans/games/commands.py](../sixMans/games/commands.py)
+- Leaderboards, ranks and `[p]rebuildPlayerTotals`:
+  [sixMans/scoreboard/commands.py](../sixMans/scoreboard/commands.py)
+- Guild-wide settings and data management:
+  [sixMans/settings/commands.py](../sixMans/settings/commands.py)
 
 ## Conventions
 
